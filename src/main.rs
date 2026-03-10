@@ -1,14 +1,13 @@
 use crate::{
     screen::{Screen, ScreenCoords},
     signal::{Signal, SignalCoords},
+    theme::Theme,
     viewport::Viewport,
 };
 use ggez::{
     event::EventHandler,
     glam::Vec2,
-    graphics::{
-        Canvas, Color, DrawParam, Drawable, Image, ImageFormat, Mesh, Rect, ScreenImage, Text,
-    },
+    graphics::{Canvas, DrawParam, Drawable, Image, ImageFormat, Mesh, Rect, ScreenImage, Text},
     mint::Point2,
 };
 use std::{
@@ -18,6 +17,7 @@ use std::{
 
 mod screen;
 mod signal;
+mod theme;
 mod tooltip;
 mod viewport;
 
@@ -106,6 +106,7 @@ pub struct State {
     save_paths: Vec<PathBuf>,
     pending_screenshot: Option<(Image, Vec<PathBuf>)>,
     screen_image: Option<ScreenImage>,
+    theme: Theme,
 }
 
 impl State {
@@ -122,6 +123,7 @@ impl State {
             save_paths: Vec::new(),
             pending_screenshot: None,
             screen_image: None,
+            theme: Theme::Light,
         }
     }
 
@@ -185,7 +187,7 @@ impl EventHandler for State {
                 Command::NewPoints(points) => {
                     if self.signals.len() + 1 < points.len() {
                         for i in self.signals.len()..(points.len() - 1) {
-                            self.signals.push(Signal::new(i));
+                            self.signals.push(Signal::new(i, self.theme));
                         }
                     }
 
@@ -202,7 +204,7 @@ impl EventHandler for State {
                 Command::NewNames(names) => {
                     if self.signals.len() + 1 < names.len() {
                         for i in self.signals.len()..(names.len() - 1) {
-                            self.signals.push(Signal::new(i));
+                            self.signals.push(Signal::new(i, self.theme));
                         }
                     }
 
@@ -229,7 +231,20 @@ impl EventHandler for State {
             .screen_image
             .get_or_insert_with(|| ScreenImage::new(ctx, ImageFormat::Rgba8UnormSrgb, 1., 1., 1));
         let image = screen_image.image(ctx);
-        let mut canvas = Canvas::from_image(ctx, image.clone(), Color::BLACK);
+        let mut canvas = Canvas::from_image(ctx, image.clone(), self.theme.control_weak());
+
+        let grid_background = Mesh::new_rectangle(
+            ctx,
+            ggez::graphics::DrawMode::fill(),
+            Rect::new(
+                self.viewport.x,
+                self.screen.height - self.viewport.y - self.viewport.height,
+                self.viewport.width,
+                self.viewport.height,
+            ),
+            self.theme.background(),
+        )?;
+        grid_background.draw(&mut canvas, DrawParam::default());
 
         // Keep our coordinate system in logical units (points), so UI/layout math
         // stays stable across HiDPI displays (Retina) while still rendering sharp.
@@ -240,6 +255,12 @@ impl EventHandler for State {
 
         let step = (max.y - min.y) / 5.0;
         for i in 0..6 {
+            let grid_len = if i == 0 {
+                self.viewport.width
+            } else {
+                self.viewport.width * 0.01
+            };
+
             let i = i as f32 * step + min.y;
             let normalized_y =
                 (i - min.y) / (max.y - min.y) * self.viewport.height + self.viewport.y;
@@ -248,7 +269,12 @@ impl EventHandler for State {
                 x: self.viewport.x - 40.0,
                 y: self.screen.height - normalized_y - 10.0,
             };
-            canvas.draw(&text, DrawParam::new().dest(dest_point).color(Color::WHITE));
+            canvas.draw(
+                &text,
+                DrawParam::new()
+                    .dest(dest_point)
+                    .color(self.theme.control_strong()),
+            );
 
             let line = Mesh::new_line(
                 ctx,
@@ -258,23 +284,24 @@ impl EventHandler for State {
                         y: self.screen.height - normalized_y,
                     },
                     Point2 {
-                        x: self.viewport.x + self.viewport.width,
+                        x: self.viewport.x + grid_len,
                         y: self.screen.height - normalized_y,
                     },
                 ],
                 1.0,
-                ggez::graphics::Color::from_rgba(
-                    (255.0 * 0.6) as u8,
-                    (255.0 * 0.6) as u8,
-                    (255.0 * 0.6) as u8,
-                    255,
-                ),
+                self.theme.control_strong(),
             )?;
             line.draw(&mut canvas, DrawParam::default());
         }
 
         let step = (max.x - min.x) / 5.0;
         for i in 0..6 {
+            let grid_len = if i == 0 {
+                self.viewport.height
+            } else {
+                self.viewport.height * 0.01
+            };
+
             let i = i as f32 * step + min.x;
             let normalized_x =
                 (i - min.x) / (max.x - min.x) * self.viewport.width + self.viewport.x;
@@ -283,7 +310,12 @@ impl EventHandler for State {
                 x: normalized_x - 10.0,
                 y: self.screen.height - self.viewport.y + 10.0,
             };
-            canvas.draw(&text, DrawParam::new().dest(dest_point).color(Color::WHITE));
+            canvas.draw(
+                &text,
+                DrawParam::new()
+                    .dest(dest_point)
+                    .color(self.theme.control_strong()),
+            );
 
             let line = Mesh::new_line(
                 ctx,
@@ -294,16 +326,11 @@ impl EventHandler for State {
                     },
                     Point2 {
                         x: normalized_x,
-                        y: self.screen.height - self.viewport.y - self.viewport.height,
+                        y: self.screen.height - self.viewport.y - grid_len,
                     },
                 ],
                 1.0,
-                ggez::graphics::Color::from_rgba(
-                    (255.0 * 0.6) as u8,
-                    (255.0 * 0.6) as u8,
-                    (255.0 * 0.6) as u8,
-                    255,
-                ),
+                self.theme.control_strong(),
             )?;
             line.draw(&mut canvas, DrawParam::default());
         }
@@ -319,7 +346,7 @@ impl EventHandler for State {
             DrawParam::new()
                 .dest(dest_point)
                 .scale([scale, scale])
-                .color(Color::WHITE),
+                .color(self.theme.control_strong()),
         );
         let signal = Text::new("Signals");
         let dest_point = Point2 {
@@ -332,7 +359,7 @@ impl EventHandler for State {
                 .dest(dest_point)
                 .rotation(-std::f32::consts::FRAC_PI_2)
                 .scale([scale, scale])
-                .color(Color::WHITE),
+                .color(self.theme.control_strong()),
         );
 
         let mouse = ScreenCoords {
@@ -362,6 +389,7 @@ impl EventHandler for State {
                 min,
                 max,
                 &self.viewport,
+                self.theme,
             );
         }
 
@@ -381,7 +409,8 @@ impl EventHandler for State {
             let aligned_w = ((w + 63) / 64) * 64;
             let save_image =
                 Image::new_canvas_image(ctx, ImageFormat::Rgba8UnormSrgb, aligned_w, h, 1);
-            let mut save_canvas = Canvas::from_image(ctx, save_image.clone(), Color::BLACK);
+            let mut save_canvas =
+                Canvas::from_image(ctx, save_image.clone(), self.theme.control_weak());
             save_canvas.draw(&image, DrawParam::default());
             save_canvas.finish(ctx)?;
             let paths = std::mem::take(&mut self.save_paths);

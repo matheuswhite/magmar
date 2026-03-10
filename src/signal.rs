@@ -1,5 +1,6 @@
 use crate::{
     screen::ScreenCoords,
+    theme::Theme,
     tooltip::Tooltip,
     viewport::{Viewport, ViewportCoords},
 };
@@ -8,22 +9,6 @@ use ggez::{
     glam::Vec2,
     graphics::{Canvas, Color},
 };
-
-const SIGNAL_LUT: &[(u8, u8, u8)] = &[
-    (255, 255, 0),
-    (0, 255, 255),
-    (255, 0, 255),
-    (255, 128, 0),
-    (128, 255, 0),
-    (0, 128, 255),
-    (255, 0, 128),
-    (0, 255, 128),
-];
-
-fn gen_color(index: usize) -> Color {
-    let (r, g, b) = SIGNAL_LUT[index % SIGNAL_LUT.len()];
-    Color::from_rgb(r, g, b)
-}
 
 pub struct Signal {
     pub index: usize,
@@ -42,9 +27,9 @@ pub struct SignalCoords {
 }
 
 impl Signal {
-    pub fn new(index: usize) -> Self {
+    pub fn new(index: usize, theme: Theme) -> Self {
         let name = format!("Y{}", index + 1);
-        let color = gen_color(index);
+        let color = theme.gen_color(index);
 
         Self {
             index,

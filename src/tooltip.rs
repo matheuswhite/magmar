@@ -1,6 +1,7 @@
 use crate::{
     screen::ScreenCoords,
     signal::{Signal, SignalCoords},
+    theme::Theme,
     viewport::Viewport,
 };
 use ggez::graphics::{Canvas, Color};
@@ -32,6 +33,7 @@ impl Tooltip {
         min: SignalCoords,
         max: SignalCoords,
         viewport: &Viewport,
+        theme: Theme,
     ) {
         if signal.points.is_empty() {
             return;
@@ -92,12 +94,7 @@ impl Tooltip {
             ctx,
             ggez::graphics::DrawMode::fill(),
             ggez::graphics::Rect::new(tooltip_pos.x, tooltip_pos.y, width, self.height),
-            Color::from_rgba(
-                (255.0 * 0.2) as u8,
-                (255.0 * 0.2) as u8,
-                (255.0 * 0.2) as u8,
-                255,
-            ),
+            theme.control_weak(),
         )
         .unwrap();
         canvas.draw(&rect, ggez::graphics::DrawParam::default());
