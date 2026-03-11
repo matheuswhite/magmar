@@ -11,7 +11,6 @@ use ggez::{
 };
 
 pub struct Signal {
-    pub index: usize,
     pub color: Color,
     pub points: Vec<SignalCoords>,
     pub min: SignalCoords,
@@ -32,7 +31,6 @@ impl Signal {
         let color = theme.gen_color(index);
 
         Self {
-            index,
             color,
             points: Vec::new(),
             min: SignalCoords {

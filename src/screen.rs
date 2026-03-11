@@ -1,3 +1,5 @@
+use ggez::{glam::Vec2, mint::Point2};
+
 use crate::viewport::{Viewport, ViewportCoords};
 
 pub struct Screen {
@@ -34,6 +36,15 @@ impl ScreenCoords {
         ViewportCoords {
             x: self.x - viewport.x,
             y: self.y - viewport.y,
+        }
+    }
+}
+
+impl From<ScreenCoords> for Point2<f32> {
+    fn from(coords: ScreenCoords) -> Self {
+        Point2 {
+            x: coords.x,
+            y: coords.y,
         }
     }
 }
