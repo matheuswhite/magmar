@@ -1,4 +1,4 @@
-use ggez::{glam::Vec2, mint::Point2};
+use ggez::mint::Point2;
 
 use crate::viewport::{Viewport, ViewportCoords};
 

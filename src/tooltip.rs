@@ -1,5 +1,5 @@
 use crate::{
-    screen::ScreenCoords,
+    screen::{Screen, ScreenCoords},
     signal::{Signal, SignalCoords},
     theme::Theme,
     viewport::Viewport,
@@ -28,21 +28,17 @@ impl Tooltip {
         canvas: &mut Canvas,
         ctx: &mut ggez::Context,
         mouse: ScreenCoords,
-        height: f32,
         signal: &Signal,
         min: SignalCoords,
         max: SignalCoords,
         viewport: &Viewport,
         theme: Theme,
+        screen: &Screen,
     ) {
         if signal.points.is_empty() {
             return;
         }
 
-        let mouse = ScreenCoords {
-            x: mouse.x,
-            y: height - mouse.y,
-        };
         if !viewport.is_inside(mouse) {
             return;
         }
@@ -77,10 +73,7 @@ impl Tooltip {
         let point_viewport = closest_point.to_viewport(viewport, min, max);
         let point_screen = point_viewport.to_screen(viewport);
 
-        let point = ScreenCoords {
-            x: mouse.x,
-            y: height - point_screen.y,
-        };
+        let point = screen.fix_coords(mouse.x, point_screen.y);
         let tooltip_pos = ScreenCoords {
             x: point.x - self.width / 2.0,
             y: point.y - self.height - 10.0,
@@ -120,16 +113,12 @@ impl Tooltip {
         canvas: &mut Canvas,
         ctx: &mut ggez::Context,
         mouse: ScreenCoords,
-        height: f32,
         signal: &Signal,
         min: SignalCoords,
         max: SignalCoords,
         viewport: &Viewport,
+        screen: &Screen,
     ) {
-        let mouse = ScreenCoords {
-            x: mouse.x,
-            y: height - mouse.y,
-        };
         if !viewport.is_inside(mouse) {
             return;
         }
@@ -164,10 +153,7 @@ impl Tooltip {
         let point_viewport = closest_point.to_viewport(viewport, min, max);
         let point_screen = point_viewport.to_screen(viewport);
 
-        let point = ScreenCoords {
-            x: mouse.x,
-            y: height - point_screen.y,
-        };
+        let point = screen.fix_coords(mouse.x, point_screen.y);
 
         let circ = ggez::graphics::Mesh::new_circle(
             ctx,

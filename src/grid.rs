@@ -48,10 +48,7 @@ impl Grid {
             let normalized_y = (i - min.y) / (max.y - min.y) * viewport.height + viewport.y;
 
             let text = Text::new(format!("{:.2}", i));
-            let dest_point = Vec2 {
-                x: viewport.x - 40.0,
-                y: viewport.height - normalized_y - 10.0,
-            };
+            let dest_point = screen.fix_coords(viewport.x - 40.0, normalized_y + 10.0);
             canvas.draw(
                 &text,
                 DrawParam::new()

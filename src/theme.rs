@@ -4,6 +4,7 @@ const fn color(r: u8, g: u8, b: u8) -> Color {
     Color::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, 1.0)
 }
 
+#[allow(unused)]
 pub mod light {
     use super::color;
     use ggez::graphics::Color;
@@ -27,6 +28,7 @@ pub mod light {
     pub const BROWN: Color = color(172, 127, 94);
 }
 
+#[allow(unused)]
 pub mod dark {
     use super::color;
     use ggez::graphics::Color;

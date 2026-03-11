@@ -1,4 +1,5 @@
-use crate::{state::State, stdin_task::read_stdin_task};
+use crate::{state::State, stdin_task::read_stdin_task, theme::Theme};
+use clap::Parser;
 
 mod grid;
 mod screen;
@@ -9,10 +10,23 @@ mod theme;
 mod tooltip;
 mod viewport;
 
+#[derive(Parser, Debug)]
+struct Args {
+    #[arg(long, default_value_t = false)]
+    light: bool,
+}
+
 fn main() {
+    let args = Args::parse();
+    let theme = if args.light {
+        Theme::Light
+    } else {
+        Theme::Dark
+    };
+
     let (tx, rx) = std::sync::mpsc::channel();
     std::thread::spawn(move || read_stdin_task(tx));
-    let state = State::new(rx);
+    let state = State::new(rx, theme);
 
     let cb = ggez::ContextBuilder::new("magmar", "matheuswhite")
         .window_setup(ggez::conf::WindowSetup {

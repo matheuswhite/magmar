@@ -1,6 +1,6 @@
 use crate::{
     grid::Grid,
-    screen::{Screen, ScreenCoords},
+    screen::Screen,
     signal::{Signal, SignalCoords},
     stdin_task::Command,
     theme::Theme,
@@ -9,7 +9,7 @@ use crate::{
 use ggez::{
     event::EventHandler,
     glam::Vec2,
-    graphics::{Canvas, DrawParam, Drawable, Image, ImageFormat, Mesh, Rect, ScreenImage, Text},
+    graphics::{Canvas, DrawParam, Image, ImageFormat, Rect, ScreenImage},
 };
 use std::{path::PathBuf, sync::mpsc::Receiver};
 
@@ -27,7 +27,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(rx: Receiver<Command>) -> Self {
+    pub fn new(rx: Receiver<Command>, theme: Theme) -> Self {
         let screen = Screen::default();
 
         Self {
@@ -40,7 +40,7 @@ impl State {
             save_paths: Vec::new(),
             pending_screenshot: None,
             screen_image: None,
-            theme: Theme::Light,
+            theme,
         }
     }
 
@@ -167,20 +167,17 @@ impl EventHandler for State {
             self.theme,
         )?;
 
-        let mouse = ScreenCoords {
-            x: self.pos.x,
-            y: self.pos.y,
-        };
+        let mouse = self.screen.fix_coords(self.pos.x, self.pos.y);
 
         for signal in &self.signals {
             signal.draw(
                 &mut canvas,
                 ctx,
                 &self.viewport,
-                self.screen.height,
                 min,
                 max,
                 mouse,
+                &self.screen,
             );
         }
 
@@ -189,12 +186,12 @@ impl EventHandler for State {
                 &mut canvas,
                 ctx,
                 mouse,
-                self.screen.height,
                 signal,
                 min,
                 max,
                 &self.viewport,
                 self.theme,
+                &self.screen,
             );
         }
 

@@ -1,14 +1,11 @@
 use crate::{
-    screen::ScreenCoords,
+    screen::{Screen, ScreenCoords},
     theme::Theme,
     tooltip::Tooltip,
     viewport::{Viewport, ViewportCoords},
 };
 use core::f32;
-use ggez::{
-    glam::Vec2,
-    graphics::{Canvas, Color},
-};
+use ggez::graphics::{Canvas, Color};
 
 pub struct Signal {
     pub color: Color,
@@ -74,10 +71,10 @@ impl Signal {
         canvas: &mut Canvas,
         ctx: &mut ggez::Context,
         viewport: &Viewport,
-        height: f32,
         min: SignalCoords,
         max: SignalCoords,
         mouse: ScreenCoords,
+        screen: &Screen,
     ) {
         if self.points.len() < 2 {
             return;
@@ -88,10 +85,7 @@ impl Signal {
             .iter()
             .map(|&point| {
                 let normalized = point.to_viewport(viewport, min, max);
-                Vec2 {
-                    x: normalized.x + viewport.x,
-                    y: height - (normalized.y + viewport.y),
-                }
+                screen.fix_coords(normalized.x + viewport.x, normalized.y + viewport.y)
             })
             .collect::<Vec<_>>();
 
@@ -99,7 +93,7 @@ impl Signal {
         canvas.draw(&line, ggez::graphics::DrawParam::default());
 
         self.tooltip
-            .draw_point(canvas, ctx, mouse, height, self, min, max, viewport);
+            .draw_point(canvas, ctx, mouse, self, min, max, viewport, screen);
     }
 }
 
