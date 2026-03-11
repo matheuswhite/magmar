@@ -14,6 +14,8 @@ mod viewport;
 struct Args {
     #[arg(long, default_value_t = false)]
     light: bool,
+    #[arg(short, long)]
+    title: Option<String>,
 }
 
 fn main() {
@@ -30,7 +32,7 @@ fn main() {
 
     let cb = ggez::ContextBuilder::new("magmar", "matheuswhite")
         .window_setup(ggez::conf::WindowSetup {
-            title: "Magmar".to_string(),
+            title: args.title.unwrap_or_else(|| "Magmar".to_string()),
             ..Default::default()
         })
         // On macOS Retina/HiDPI, ggez interprets `WindowMode::dimensions()` as *physical pixels*.
