@@ -2,8 +2,11 @@
 name = "magmar"
 version = "0.1.0"
 edition = "2024"
+authors = ["Matheus T. dos Santos <matheuswhite1@protonmail.com>"]
+description = "A plotter viewer that receives data from stdin and plots it in real time"
+license = "MIT"
 
 [dependencies]
-clap = {version = "4.5.60", features = ["derive"] }
+clap = { version = "4.5.60", features = ["derive"] }
 ggez = "0.9.3"
 image = { version = "0.24", default-features = false, features = ["png"] }
