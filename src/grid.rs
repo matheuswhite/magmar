@@ -3,6 +3,7 @@ use ggez::{
     glam::Vec2,
     graphics::{Canvas, DrawParam, Drawable, Mesh, Rect, Text},
 };
+use std::cmp::Ordering;
 
 pub struct Grid {
     pub steps: (usize, usize),
@@ -37,6 +38,27 @@ impl Grid {
     ) -> Result<(), ggez::GameError> {
         let step = (max.y - min.y) / self.steps.1 as f32;
 
+        let labels = (0..=self.steps.1)
+            .map(|i| i as f32 * step + min.y)
+            .collect::<Vec<_>>();
+        let minimum = labels
+            .iter()
+            .skip(1)
+            .min_by(|a, b| {
+                if a < b {
+                    Ordering::Less
+                } else if a > b {
+                    Ordering::Greater
+                } else {
+                    Ordering::Equal
+                }
+            })
+            .unwrap();
+        let mut multiplier = 1;
+        while (minimum * 10.0_f32.powi(multiplier)).trunc() == 0.0 {
+            multiplier += 1;
+        }
+
         for i in 0..=self.steps.1 {
             let grid_len = if i == 0 {
                 viewport.width
@@ -46,9 +68,19 @@ impl Grid {
 
             let i = i as f32 * step + min.y;
             let normalized_y = (i - min.y) / (max.y - min.y) * viewport.height + viewport.y;
+            let i = if multiplier > 1 {
+                i * 10.0_f32.powi(multiplier)
+            } else {
+                i
+            };
 
-            let text = Text::new(format!("{:.2}", i));
-            let dest_point = screen.fix_coords(viewport.x - 40.0, normalized_y + 10.0);
+            let text_string = format!("{:.2}", i);
+            let text_string_len = text_string.chars().count();
+            let text = Text::new(text_string);
+            let dest_point = screen.fix_coords(
+                viewport.x - 10.0 * text_string_len as f32,
+                normalized_y + 10.0,
+            );
             canvas.draw(
                 &text,
                 DrawParam::new()
@@ -66,6 +98,17 @@ impl Grid {
                 theme.control_strong(),
             )?;
             line.draw(canvas, DrawParam::default());
+        }
+
+        if multiplier > 1 {
+            let multiplier_text = Text::new(format!("10^{}", -multiplier));
+            let dest_point = screen.fix_coords(viewport.x - 10.0, screen.height - 10.0);
+            canvas.draw(
+                &multiplier_text,
+                DrawParam::new()
+                    .dest(dest_point)
+                    .color(theme.control_strong()),
+            );
         }
 
         let signals = Text::new(&self.y_label);
