@@ -79,7 +79,7 @@ impl Tooltip {
             y: point.y - self.height - 10.0,
         };
 
-        let text = ggez::graphics::Text::new(format!("{}: {:.2}", self.name, closest_point.y));
+        let text = ggez::graphics::Text::new(format!("{}: {:.2e}", self.name, closest_point.y));
         let text_dims = text.measure(ctx).unwrap();
         let width = text_dims.x + 10.0;
 

@@ -100,18 +100,16 @@ impl Grid {
             line.draw(canvas, DrawParam::default());
         }
 
-        if multiplier > 1 {
-            let multiplier_text = Text::new(format!("10^{}", -multiplier));
-            let dest_point = screen.fix_coords(viewport.x - 10.0, screen.height - 10.0);
-            canvas.draw(
-                &multiplier_text,
-                DrawParam::new()
-                    .dest(dest_point)
-                    .color(theme.control_strong()),
-            );
-        }
-
-        let signals = Text::new(&self.y_label);
+        let y_label = if multiplier > 1 {
+            format!(
+                "{} (10{})",
+                &self.y_label,
+                " ".repeat((-multiplier).to_string().len())
+            )
+        } else {
+            self.y_label.clone()
+        };
+        let signals = Text::new(y_label);
         let dest_point = Vec2 {
             x: 15.0,
             y: screen.height / 2.0,
@@ -123,6 +121,20 @@ impl Grid {
                 .color(theme.control_strong())
                 .rotation(-std::f32::consts::FRAC_PI_2),
         );
+
+        if multiplier > 1 {
+            let multiplier_text = Text::new(format!("{}", -multiplier));
+            let x =
+                -signals.measure(ctx).unwrap().x + multiplier_text.measure(ctx).unwrap().x + 10.0;
+            let dest_point = dest_point + Vec2::new(-7.0, x);
+            canvas.draw(
+                &multiplier_text,
+                DrawParam::new()
+                    .dest(dest_point)
+                    .color(theme.control_strong())
+                    .rotation(-std::f32::consts::FRAC_PI_2),
+            );
+        }
 
         Ok(())
     }
