@@ -1,14 +1,19 @@
 use crate::{state::State, stdin_task::read_stdin_task, theme::Theme};
 use clap::Parser;
 
-mod grid;
+mod drawable;
 mod screen;
 mod signal;
 mod state;
 mod stdin_task;
 mod theme;
+mod title;
 mod tooltip;
 mod viewport;
+mod x_axis;
+mod x_label;
+mod y_axis;
+mod y_label;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -39,7 +44,7 @@ fn main() {
         // Using `logical_size` makes the window size consistent in "points" across displays.
         .window_mode(ggez::conf::WindowMode {
             logical_size: Some(ggez::winit::dpi::LogicalSize::new(
-                state.screen.width,
+                state.screen.width + 50.0,
                 state.screen.height,
             )),
             ..Default::default()

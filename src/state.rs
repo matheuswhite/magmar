@@ -1,10 +1,16 @@
 use crate::{
-    grid::Grid,
+    drawable::Drawable,
     screen::Screen,
     signal::{Signal, SignalCoords},
     stdin_task::Command,
     theme::Theme,
+    title::Title,
+    tooltip::TooltipDot,
     viewport::Viewport,
+    x_axis::XAxis,
+    x_label::XLabel,
+    y_axis::YAxis,
+    y_label::YLabel,
 };
 use ggez::{
     event::EventHandler,
@@ -16,6 +22,11 @@ use std::{path::PathBuf, sync::mpsc::Receiver};
 pub struct State {
     signals: Vec<Signal>,
     viewport: Viewport,
+    title: Title,
+    x_axis: XAxis,
+    y_axis: YAxis,
+    x_label: XLabel,
+    y_label: YLabel,
     pub screen: Screen,
     rx: Receiver<Command>,
     pos: Vec2,
@@ -23,20 +34,29 @@ pub struct State {
     pending_screenshot: Option<(Image, Vec<PathBuf>)>,
     screen_image: Option<ScreenImage>,
     theme: Theme,
-    grid: Grid,
 }
 
 impl State {
     pub fn new(rx: Receiver<Command>, theme: Theme) -> Self {
         let screen = Screen::default();
 
+        let viewport = Viewport::new(&screen);
+        let x_axis = XAxis::new(&viewport, &screen, 5);
+        let y_axis = YAxis::new(&viewport, &screen, 5);
+        let x_label = XLabel::new(&viewport, &screen, "Time (s)");
+        let y_label = YLabel::new(&viewport, &screen, "Signals");
+
         Self {
             signals: Vec::new(),
-            viewport: Viewport::new(60.0, 25.0, &screen),
+            viewport,
+            title: Title::new(&screen, "Magmar"),
+            x_axis,
+            y_axis,
+            x_label,
+            y_label,
             screen,
             rx,
             pos: Vec2::ZERO,
-            grid: Grid::default(),
             save_paths: Vec::new(),
             pending_screenshot: None,
             screen_image: None,
@@ -104,7 +124,8 @@ impl EventHandler for State {
                 Command::NewPoints(points) => {
                     if self.signals.len() + 1 < points.len() {
                         for i in self.signals.len()..(points.len() - 1) {
-                            self.signals.push(Signal::new(i, self.theme));
+                            self.signals
+                                .push(Signal::new(i, &self.viewport, self.theme));
                         }
                     }
 
@@ -121,13 +142,14 @@ impl EventHandler for State {
                 Command::NewNames(names) => {
                     if self.signals.len() + 1 < names.len() {
                         for i in self.signals.len()..(names.len() - 1) {
-                            self.signals.push(Signal::new(i, self.theme));
+                            self.signals
+                                .push(Signal::new(i, &self.viewport, self.theme));
                         }
                     }
 
                     let mut names = names.into_iter();
                     if let Some(x_name) = names.next() {
-                        self.grid.set_x_label(x_name);
+                        self.x_label.set_text(x_name);
                     }
 
                     for (name, signal) in names.zip(self.signals.iter_mut()) {
@@ -152,47 +174,100 @@ impl EventHandler for State {
 
         // Keep our coordinate system in logical units (points), so UI/layout math
         // stays stable across HiDPI displays (Retina) while still rendering sharp.
-        canvas.set_screen_coordinates(Rect::new(0.0, 0.0, self.screen.width, self.screen.height));
+        canvas.set_screen_coordinates(Rect::new(
+            0.0,
+            0.0,
+            self.screen.width + 50.0,
+            self.screen.height,
+        ));
 
         let max = self.max();
         let min = self.min();
 
-        self.grid.draw(
+        self.x_axis.set_min_max(min.x, max.x);
+        self.y_axis.set_min_max(min.y, max.y);
+
+        self.title.draw(
+            Vec2 {
+                x: 0.0,
+                y: self.screen.height * 0.2,
+            },
             &mut canvas,
             ctx,
-            min,
-            max,
-            &self.viewport,
-            &self.screen,
             self.theme,
-        )?;
+        );
+        let viewport_pos = Vec2 {
+            x: self.screen.width * (0.15 + 0.15),
+            y: self.screen.height * (0.2 + 0.2),
+        };
+        self.viewport
+            .draw(viewport_pos, &mut canvas, ctx, self.theme);
+        self.y_label.draw(
+            Vec2 {
+                x: 0.0,
+                y: self.screen.height * (0.2 + 0.2),
+            },
+            &mut canvas,
+            ctx,
+            self.theme,
+        );
+        self.y_axis.draw(
+            Vec2 {
+                x: self.screen.width * 0.15,
+                y: self.screen.height * (0.2 + 0.2),
+            },
+            &mut canvas,
+            ctx,
+            self.theme,
+        );
+        self.x_axis.draw(
+            Vec2 {
+                x: self.screen.width * (0.15 + 0.15),
+                y: self.screen.height * (0.2 + 0.2 + (0.6 * 0.7)),
+            },
+            &mut canvas,
+            ctx,
+            self.theme,
+        );
+        self.x_label.draw(
+            Vec2 {
+                x: self.screen.width * (0.15 + 0.15),
+                y: self.screen.height * (0.2 + 0.2 + (0.6 * (0.15 + 0.7))),
+            },
+            &mut canvas,
+            ctx,
+            self.theme,
+        );
 
-        let mouse = self.screen.fix_coords(self.pos.x, self.pos.y);
+        let mouse = Vec2 {
+            x: self.pos.x,
+            y: self.pos.y,
+        };
 
-        for signal in &self.signals {
-            signal.draw(
-                &mut canvas,
-                ctx,
-                &self.viewport,
-                min,
-                max,
+        let mut pos_values = vec![];
+        for signal in &mut self.signals {
+            signal.set_global_max_min(max, min);
+            signal.draw(viewport_pos, &mut canvas, ctx, self.theme);
+
+            let Some((position, value)) = TooltipDot::get_position_and_value(
                 mouse,
-                &self.screen,
-            );
+                viewport_pos,
+                self.viewport.size(),
+                signal,
+                max,
+                min,
+            ) else {
+                continue;
+            };
+            pos_values.push((position, value));
+            signal
+                .tooltip_dot
+                .draw(position, &mut canvas, ctx, self.theme);
         }
 
-        for signal in &self.signals {
-            signal.tooltip.draw(
-                &mut canvas,
-                ctx,
-                mouse,
-                signal,
-                min,
-                max,
-                &self.viewport,
-                self.theme,
-                &self.screen,
-            );
+        for (signal, (pos, value)) in self.signals.iter_mut().zip(pos_values) {
+            signal.tooltip.value = value;
+            signal.tooltip.draw(pos, &mut canvas, ctx, self.theme);
         }
 
         canvas.finish(ctx)?;

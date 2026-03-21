@@ -1,16 +1,24 @@
 use crate::{
-    screen::{Screen, ScreenCoords},
+    drawable::Drawable,
+    screen::ScreenCoords,
     signal::{Signal, SignalCoords},
     theme::Theme,
-    viewport::Viewport,
 };
-use ggez::graphics::{Canvas, Color};
+use ggez::{
+    glam::Vec2,
+    graphics::{Canvas, Color},
+};
 
 pub struct Tooltip {
+    pub value: f32,
     pub width: f32,
     pub height: f32,
     pub name: String,
     pub color: Color,
+}
+
+pub struct TooltipDot {
+    color: Color,
 }
 
 impl Tooltip {
@@ -20,66 +28,82 @@ impl Tooltip {
             height: 25.0,
             name,
             color,
+            value: 0.0,
         }
     }
 
-    pub fn draw(
-        &self,
-        canvas: &mut Canvas,
-        ctx: &mut ggez::Context,
-        mouse: ScreenCoords,
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+}
+
+impl TooltipDot {
+    pub fn new(color: Color) -> Self {
+        Self { color }
+    }
+
+    pub fn is_inside_viewport(mouse: Vec2, position: Vec2, viewport_size: Vec2) -> bool {
+        mouse.x >= position.x
+            && mouse.x <= position.x + viewport_size.x
+            && mouse.y >= position.y
+            && mouse.y <= position.y + viewport_size.y
+    }
+
+    pub fn get_position_and_value(
+        mouse: Vec2,
+        viewport_pos: Vec2,
+        viewport_size: Vec2,
         signal: &Signal,
-        min: SignalCoords,
         max: SignalCoords,
-        viewport: &Viewport,
-        theme: Theme,
-        screen: &Screen,
-    ) {
+        min: SignalCoords,
+    ) -> Option<(Vec2, f32)> {
         if signal.points.is_empty() {
-            return;
+            return None;
         }
 
-        if !viewport.is_inside(mouse) {
-            return;
+        if !Self::is_inside_viewport(mouse, viewport_pos, viewport_size) {
+            return None;
         }
 
-        let mouse_viewport = mouse.to_viewport(viewport);
-        let mouse_signal = mouse_viewport.to_signal(signal, viewport);
+        let mouse_viewport = mouse - viewport_pos
+            + Vec2 {
+                x: 0.0,
+                y: viewport_size.y,
+            };
+        let mouse_viewport_normalized = Vec2 {
+            x: mouse_viewport.x / viewport_size.x,
+            y: mouse_viewport.y / viewport_size.y,
+        };
+        let mouse_signal_t =
+            mouse_viewport_normalized.x * (signal.max.x - signal.min.x) + signal.min.x;
 
-        let mut min_step = f32::MAX;
-        for i in 0..signal.points.len() - 1 {
-            let p1 = signal.points[i];
-            let p2 = signal.points[i + 1];
-
-            let diff = (p1.x - p2.x).abs();
-            if diff < min_step {
-                min_step = diff;
-            }
-        }
-
-        let mut closest_point = None;
-        for point in &signal.points {
-            let diff = (point.x - mouse_signal.x).abs();
-            if diff <= min_step {
-                closest_point = Some(*point);
-                break;
-            }
-        }
-
-        let Some(closest_point) = closest_point else {
-            return;
+        let closest_point = SignalCoords {
+            x: mouse_signal_t,
+            y: signal.value_at(mouse_signal_t),
         };
 
-        let point_viewport = closest_point.to_viewport(viewport, min, max);
-        let point_screen = point_viewport.to_screen(viewport);
+        let point_normalized = Vec2 {
+            x: (closest_point.x - min.x) / (max.x - min.x),
+            y: (closest_point.y - min.y) / (max.y - min.y),
+        };
+        let point_viewport = Vec2 {
+            x: point_normalized.x * viewport_size.x,
+            y: (1.0 - point_normalized.y) * viewport_size.y,
+        };
+        let point_screen = point_viewport + viewport_pos;
 
-        let point = screen.fix_coords(mouse.x, point_screen.y);
+        Some((point_screen, closest_point.y))
+    }
+}
+
+impl Drawable for Tooltip {
+    fn draw(&self, position: Vec2, canvas: &mut Canvas, ctx: &mut ggez::Context, theme: Theme) {
         let tooltip_pos = ScreenCoords {
-            x: point.x - self.width / 2.0,
-            y: point.y - self.height - 10.0,
+            x: position.x - self.width / 2.0,
+            y: position.y - self.height - 10.0,
         };
 
-        let text = ggez::graphics::Text::new(format!("{}: {:.2e}", self.name, closest_point.y));
+        let text = ggez::graphics::Text::new(format!("{}: {:.2e}", self.name, self.value));
         let text_dims = text.measure(ctx).unwrap();
         let width = text_dims.x + 10.0;
 
@@ -103,64 +127,16 @@ impl Tooltip {
                 .color(self.color),
         );
     }
+}
 
-    pub fn set_name(&mut self, name: String) {
-        self.name = name;
-    }
-
-    pub fn draw_point(
-        &self,
-        canvas: &mut Canvas,
-        ctx: &mut ggez::Context,
-        mouse: ScreenCoords,
-        signal: &Signal,
-        min: SignalCoords,
-        max: SignalCoords,
-        viewport: &Viewport,
-        screen: &Screen,
-    ) {
-        if !viewport.is_inside(mouse) {
-            return;
-        }
-
-        let mouse_viewport = mouse.to_viewport(viewport);
-        let mouse_signal = mouse_viewport.to_signal(signal, viewport);
-
-        let mut min_step = f32::MAX;
-        for i in 0..signal.points.len() - 1 {
-            let p1 = signal.points[i];
-            let p2 = signal.points[i + 1];
-
-            let diff = (p1.x - p2.x).abs();
-            if diff < min_step {
-                min_step = diff;
-            }
-        }
-
-        let mut closest_point = None;
-        for point in &signal.points {
-            let diff = (point.x - mouse_signal.x).abs();
-            if diff <= min_step {
-                closest_point = Some(*point);
-                break;
-            }
-        }
-
-        let Some(closest_point) = closest_point else {
-            return;
-        };
-
-        let point_viewport = closest_point.to_viewport(viewport, min, max);
-        let point_screen = point_viewport.to_screen(viewport);
-
-        let point = screen.fix_coords(mouse.x, point_screen.y);
-
+impl Drawable for TooltipDot {
+    fn draw(&self, position: Vec2, canvas: &mut Canvas, ctx: &mut ggez::Context, _theme: Theme) {
         let circ = ggez::graphics::Mesh::new_circle(
             ctx,
             ggez::graphics::DrawMode::fill(),
-            ggez::mint::Point2 {
-                x: point.x,
-                y: point.y,
+            Vec2 {
+                x: position.x,
+                y: position.y,
             },
             5.0,
             0.1,
