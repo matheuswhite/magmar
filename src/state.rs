@@ -5,6 +5,7 @@ use crate::{
     stdin_task::Command,
     theme::Theme,
     title::Title,
+    toolbar::Toolbar,
     tooltip::TooltipDot,
     viewport::Viewport,
     x_axis::XAxis,
@@ -27,6 +28,7 @@ pub struct State {
     y_axis: YAxis,
     x_label: XLabel,
     y_label: YLabel,
+    toolbar: Toolbar,
     pub screen: Screen,
     rx: Receiver<Command>,
     pos: Vec2,
@@ -54,6 +56,7 @@ impl State {
             y_axis,
             x_label,
             y_label,
+            toolbar: Toolbar::new(&screen),
             screen,
             rx,
             pos: Vec2::ZERO,
@@ -177,7 +180,7 @@ impl EventHandler for State {
         canvas.set_screen_coordinates(Rect::new(
             0.0,
             0.0,
-            self.screen.width + 50.0,
+            self.screen.width + Screen::SCREEN_WIDTH_OFFSET,
             self.screen.height,
         ));
 
@@ -187,25 +190,26 @@ impl EventHandler for State {
         self.x_axis.set_min_max(min.x, max.x);
         self.y_axis.set_min_max(min.y, max.y);
 
+        self.toolbar.draw(Vec2::ZERO, &mut canvas, ctx, self.theme);
         self.title.draw(
             Vec2 {
                 x: 0.0,
-                y: self.screen.height * 0.2,
+                y: self.screen.height * Toolbar::HEIGHT_PERCENT,
             },
             &mut canvas,
             ctx,
             self.theme,
         );
         let viewport_pos = Vec2 {
-            x: self.screen.width * (0.15 + 0.15),
-            y: self.screen.height * (0.2 + 0.2),
+            x: self.screen.width * (YLabel::WIDTH_PERCENT + YAxis::WIDTH_PERCENT),
+            y: self.screen.height * (Toolbar::HEIGHT_PERCENT + Title::HEIGHT_PERCENT),
         };
         self.viewport
             .draw(viewport_pos, &mut canvas, ctx, self.theme);
         self.y_label.draw(
             Vec2 {
                 x: 0.0,
-                y: self.screen.height * (0.2 + 0.2),
+                y: self.screen.height * (Toolbar::HEIGHT_PERCENT + Title::HEIGHT_PERCENT),
             },
             &mut canvas,
             ctx,
@@ -213,8 +217,8 @@ impl EventHandler for State {
         );
         self.y_axis.draw(
             Vec2 {
-                x: self.screen.width * 0.15,
-                y: self.screen.height * (0.2 + 0.2),
+                x: self.screen.width * YLabel::WIDTH_PERCENT,
+                y: self.screen.height * (Toolbar::HEIGHT_PERCENT + Title::HEIGHT_PERCENT),
             },
             &mut canvas,
             ctx,
@@ -222,8 +226,9 @@ impl EventHandler for State {
         );
         self.x_axis.draw(
             Vec2 {
-                x: self.screen.width * (0.15 + 0.15),
-                y: self.screen.height * (0.2 + 0.2 + (0.6 * 0.7)),
+                x: self.screen.width * (YLabel::WIDTH_PERCENT + YAxis::WIDTH_PERCENT),
+                y: self.viewport.height
+                    + (self.screen.height * (Toolbar::HEIGHT_PERCENT + Title::HEIGHT_PERCENT)),
             },
             &mut canvas,
             ctx,
@@ -231,8 +236,12 @@ impl EventHandler for State {
         );
         self.x_label.draw(
             Vec2 {
-                x: self.screen.width * (0.15 + 0.15),
-                y: self.screen.height * (0.2 + 0.2 + (0.6 * (0.15 + 0.7))),
+                x: self.screen.width * (YLabel::WIDTH_PERCENT + YAxis::WIDTH_PERCENT),
+                y: self.viewport.height
+                    + (self.screen.height
+                        * (Toolbar::HEIGHT_PERCENT
+                            + Title::HEIGHT_PERCENT
+                            + XAxis::HEIGHT_PERCENT)),
             },
             &mut canvas,
             ctx,

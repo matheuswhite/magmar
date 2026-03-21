@@ -1,9 +1,8 @@
+use crate::{drawable::Drawable, screen::Screen, viewport::Viewport};
 use ggez::{
     glam::Vec2,
     graphics::{DrawParam, Text},
 };
-
-use crate::{drawable::Drawable, screen::Screen, viewport::Viewport};
 
 pub struct XLabel {
     size: Vec2,
@@ -11,11 +10,13 @@ pub struct XLabel {
 }
 
 impl XLabel {
+    pub const HEIGHT_PERCENT: f32 = 0.1;
+
     pub fn new(viewport: &Viewport, screen: &Screen, x_label: impl AsRef<str>) -> Self {
         Self {
             size: Vec2 {
                 x: viewport.width,
-                y: screen.height * 0.15,
+                y: screen.height * Self::HEIGHT_PERCENT,
             },
             text: Text::new(x_label.as_ref()),
         }

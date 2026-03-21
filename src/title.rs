@@ -10,11 +10,13 @@ pub struct Title {
 }
 
 impl Title {
+    pub const HEIGHT_PERCENT: f32 = 0.1;
+
     pub fn new(screen: &Screen, title: impl AsRef<str>) -> Self {
         Self {
             size: Vec2 {
                 x: screen.width,
-                y: screen.height * 0.2,
+                y: screen.height * Self::HEIGHT_PERCENT,
             },
             text: Text::new(title.as_ref()),
         }

@@ -11,10 +11,14 @@ pub struct ScreenCoords {
     pub y: f32,
 }
 
+impl Screen {
+    pub const SCREEN_WIDTH_OFFSET: f32 = 50.0;
+}
+
 impl Default for Screen {
     fn default() -> Self {
         Self {
-            width: 750.0,
+            width: 800.0 - Self::SCREEN_WIDTH_OFFSET,
             height: 600.0,
         }
     }

@@ -14,7 +14,7 @@ pub struct YAxis {
 }
 
 impl YAxis {
-    pub const WIDTH_PERCENT: f32 = 0.15;
+    pub const WIDTH_PERCENT: f32 = 0.125;
 
     pub fn new(viewport: &Viewport, screen: &Screen, steps: usize) -> Self {
         Self {

@@ -1,4 +1,7 @@
-use crate::{drawable::Drawable, screen::Screen};
+use crate::{
+    drawable::Drawable, screen::Screen, title::Title, toolbar::Toolbar, x_axis::XAxis,
+    x_label::XLabel, y_axis::YAxis, y_label::YLabel,
+};
 use ggez::{
     glam::Vec2,
     graphics::{DrawParam, Mesh, Rect},
@@ -12,8 +15,13 @@ pub struct Viewport {
 impl Viewport {
     pub fn new(screen: &Screen) -> Self {
         Self {
-            width: screen.width * 0.7,
-            height: screen.height * (0.6 * 0.7),
+            width: screen.width * (1.0 - YLabel::WIDTH_PERCENT - YAxis::WIDTH_PERCENT),
+            height: screen.height
+                * (1.0
+                    - XLabel::HEIGHT_PERCENT
+                    - XAxis::HEIGHT_PERCENT
+                    - Toolbar::HEIGHT_PERCENT
+                    - Title::HEIGHT_PERCENT),
         }
     }
 

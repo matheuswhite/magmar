@@ -1,9 +1,8 @@
+use crate::{drawable::Drawable, screen::Screen, viewport::Viewport};
 use ggez::{
     glam::Vec2,
     graphics::{DrawParam, Mesh},
 };
-
-use crate::{drawable::Drawable, screen::Screen, viewport::Viewport};
 
 pub struct XAxis {
     size: Vec2,
@@ -15,11 +14,13 @@ pub struct XAxis {
 }
 
 impl XAxis {
+    pub const HEIGHT_PERCENT: f32 = 0.05;
+
     pub fn new(viewport: &Viewport, screen: &Screen, steps: usize) -> Self {
         Self {
             size: Vec2 {
                 x: viewport.width,
-                y: screen.height * 0.15,
+                y: screen.height * Self::HEIGHT_PERCENT,
             },
             steps,
             tick_len: viewport.height * 0.02,

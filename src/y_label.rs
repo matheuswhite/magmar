@@ -11,10 +11,12 @@ pub struct YLabel {
 }
 
 impl YLabel {
+    pub const WIDTH_PERCENT: f32 = 0.05;
+
     pub fn new(viewport: &Viewport, screen: &Screen, y_label: impl AsRef<str>) -> Self {
         Self {
             size: Vec2 {
-                x: screen.width * 0.15,
+                x: screen.width * Self::WIDTH_PERCENT,
                 y: viewport.height,
             },
             text: Text::new(y_label.as_ref()),
@@ -34,7 +36,7 @@ impl Drawable for YLabel {
         let dest_pos = position
             + Vec2 {
                 x: self.size.x / 2.0 - text_size.y / 2.0,
-                y: self.size.y / 2.0 - text_size.x / 2.0,
+                y: self.size.y / 2.0 + text_size.x / 2.0,
             };
 
         canvas.draw(
