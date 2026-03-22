@@ -1,5 +1,6 @@
 use crate::{
     drawable::Drawable,
+    legend::Legend,
     screen::Screen,
     signal::{Signal, SignalCoords},
     stdin_task::Command,
@@ -36,6 +37,8 @@ pub struct State {
     pending_screenshot: Option<(Image, Vec<PathBuf>)>,
     screen_image: Option<ScreenImage>,
     theme: Theme,
+    legend: Legend,
+    is_legend_enabled: bool,
 }
 
 impl State {
@@ -47,6 +50,7 @@ impl State {
         let y_axis = YAxis::new(&viewport, &screen, 5);
         let x_label = XLabel::new(&viewport, &screen, "Time (s)");
         let y_label = YLabel::new(&viewport, &screen, "Signals");
+        let legend = Legend::new(&viewport);
 
         Self {
             signals: Vec::new(),
@@ -64,6 +68,8 @@ impl State {
             pending_screenshot: None,
             screen_image: None,
             theme,
+            legend,
+            is_legend_enabled: true,
         }
     }
 
@@ -156,9 +162,15 @@ impl EventHandler for State {
                     }
 
                     for (name, signal) in names.zip(self.signals.iter_mut()) {
-                        signal.set_name(name);
+                        signal.set_name(name.clone());
+                        self.legend.add_signal(name, signal.color);
                     }
                 }
+                Command::LegendPos(pos) => {
+                    self.is_legend_enabled = true;
+                    self.legend.set_position(pos);
+                }
+                Command::DisableLegend => self.is_legend_enabled = false,
             }
         }
 
@@ -277,6 +289,10 @@ impl EventHandler for State {
         for (signal, (pos, value)) in self.signals.iter_mut().zip(pos_values) {
             signal.tooltip.value = value;
             signal.tooltip.draw(pos, &mut canvas, ctx, self.theme);
+        }
+
+        if self.is_legend_enabled {
+            self.legend.draw(viewport_pos, &mut canvas, ctx, self.theme);
         }
 
         canvas.finish(ctx)?;

@@ -2,6 +2,7 @@ use crate::{screen::Screen, state::State, stdin_task::read_stdin_task, theme::Th
 use clap::Parser;
 
 mod drawable;
+mod legend;
 mod screen;
 mod signal;
 mod state;

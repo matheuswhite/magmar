@@ -1,9 +1,13 @@
 use std::{path::PathBuf, sync::mpsc::Sender};
 
+use crate::legend::LegendPosition;
+
 pub enum Command {
     Save(PathBuf),
     NewPoints(Vec<f32>),
     NewNames(Vec<String>),
+    LegendPos(LegendPosition),
+    DisableLegend,
 }
 
 pub fn read_stdin_task(sender: Sender<Command>) -> ! {
@@ -25,6 +29,22 @@ pub fn read_stdin_task(sender: Sender<Command>) -> ! {
                 let filename = splitted.next().unwrap_or("output.png");
                 sender.send(Command::Save(PathBuf::from(filename))).unwrap();
             }
+            Some("!legend") => {
+                let pos = splitted.next().unwrap_or("top_right");
+                let pos = match pos {
+                    "top_left" => LegendPosition::TopLeft,
+                    "top" => LegendPosition::Top,
+                    "top_right" => LegendPosition::TopRight,
+                    "left" => LegendPosition::Left,
+                    "right" => LegendPosition::Right,
+                    "bottom_left" => LegendPosition::BottomLeft,
+                    "bottom" => LegendPosition::Bottom,
+                    "bottom_right" => LegendPosition::BottomRight,
+                    _ => LegendPosition::TopRight,
+                };
+                sender.send(Command::LegendPos(pos)).unwrap();
+            }
+            Some("!legend_off") => sender.send(Command::DisableLegend).unwrap(),
             Some(_) => {
                 match first.and_then(|time| time.parse::<f32>().ok()) {
                     Some(time) => {
