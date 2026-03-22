@@ -1,5 +1,6 @@
 use crate::{
     drawable::Drawable,
+    screen::Screen,
     theme::Theme,
     tooltip::{Tooltip, TooltipDot},
     viewport::Viewport,
@@ -30,7 +31,7 @@ pub struct SignalCoords {
 }
 
 impl Signal {
-    pub fn new(index: usize, viweport: &Viewport, theme: Theme) -> Self {
+    pub fn new(index: usize, viweport: &Viewport, theme: Theme, screen: &Screen) -> Self {
         let name = format!("Y{}", index + 1);
         let color = theme.gen_color(index);
 
@@ -52,7 +53,7 @@ impl Signal {
                 x: viweport.width,
                 y: viweport.height,
             },
-            tooltip: Tooltip::new(name, color),
+            tooltip: Tooltip::new(name, color, screen),
             tooltip_dot: TooltipDot::new(color),
         }
     }

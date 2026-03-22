@@ -1,6 +1,6 @@
 use crate::{
     drawable::Drawable,
-    screen::ScreenCoords,
+    screen::{Screen, ScreenCoords},
     signal::{Signal, SignalCoords},
     theme::Theme,
 };
@@ -15,6 +15,7 @@ pub struct Tooltip {
     pub height: f32,
     pub name: String,
     pub color: Color,
+    screen_width: f32,
 }
 
 pub struct TooltipDot {
@@ -22,13 +23,14 @@ pub struct TooltipDot {
 }
 
 impl Tooltip {
-    pub fn new(name: String, color: Color) -> Self {
+    pub fn new(name: String, color: Color, screen: &Screen) -> Self {
         Self {
             width: 100.0,
             height: 25.0,
             name,
             color,
             value: 0.0,
+            screen_width: screen.width,
         }
     }
 
@@ -98,7 +100,7 @@ impl TooltipDot {
 
 impl Drawable for Tooltip {
     fn draw(&self, position: Vec2, canvas: &mut Canvas, ctx: &mut ggez::Context, theme: Theme) {
-        let tooltip_pos = ScreenCoords {
+        let mut tooltip_pos = ScreenCoords {
             x: position.x - self.width / 2.0,
             y: position.y - self.height - 10.0,
         };
@@ -112,6 +114,12 @@ impl Drawable for Tooltip {
         let text = ggez::graphics::Text::new(format!("{}: {}", self.name, value));
         let text_dims = text.measure(ctx).unwrap();
         let width = text_dims.x + 10.0;
+
+        if tooltip_pos.x + width >= self.screen_width + Screen::SCREEN_WIDTH_OFFSET {
+            let overflow =
+                tooltip_pos.x + width - (self.screen_width + Screen::SCREEN_WIDTH_OFFSET);
+            tooltip_pos.x -= overflow;
+        }
 
         let rect = ggez::graphics::Mesh::new_rectangle(
             ctx,

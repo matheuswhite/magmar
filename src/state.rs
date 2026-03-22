@@ -133,8 +133,12 @@ impl EventHandler for State {
                 Command::NewPoints(points) => {
                     if self.signals.len() + 1 < points.len() {
                         for i in self.signals.len()..(points.len() - 1) {
-                            self.signals
-                                .push(Signal::new(i, &self.viewport, self.theme));
+                            self.signals.push(Signal::new(
+                                i,
+                                &self.viewport,
+                                self.theme,
+                                &self.screen,
+                            ));
                         }
                     }
 
@@ -151,8 +155,12 @@ impl EventHandler for State {
                 Command::NewNames(names) => {
                     if self.signals.len() + 1 < names.len() {
                         for i in self.signals.len()..(names.len() - 1) {
-                            self.signals
-                                .push(Signal::new(i, &self.viewport, self.theme));
+                            self.signals.push(Signal::new(
+                                i,
+                                &self.viewport,
+                                self.theme,
+                                &self.screen,
+                            ));
                         }
                     }
 
