@@ -103,11 +103,12 @@ impl Drawable for Tooltip {
             y: position.y - self.height - 10.0,
         };
 
-        let value = if self.value != 0.0 && (self.value < 0.01 || self.value >= 100.0) {
-            format!("{:.2e}", self.value)
-        } else {
-            format!("{:.2}", self.value)
-        };
+        let value =
+            if self.value.abs() != 0.0 && (self.value.abs() < 0.01 || self.value.abs() >= 100.0) {
+                format!("{:.2e}", self.value)
+            } else {
+                format!("{:.2}", self.value)
+            };
         let text = ggez::graphics::Text::new(format!("{}: {}", self.name, value));
         let text_dims = text.measure(ctx).unwrap();
         let width = text_dims.x + 10.0;

@@ -48,7 +48,7 @@ impl Drawable for XAxis {
 
         for i in 0..=self.steps {
             let value = self.min + i as f32 * step;
-            let label = if value != 0.0 && (value < 0.01 || value >= 100.0) {
+            let label = if value.abs() != 0.0 && (value.abs() < 0.01 || value.abs() >= 100.0) {
                 format!("{:.2e}", value)
             } else {
                 format!("{:.2}", value)
