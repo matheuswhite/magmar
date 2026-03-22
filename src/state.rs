@@ -334,6 +334,55 @@ impl EventHandler for State {
         let scale_factor = ctx.gfx.window().scale_factor() as f32;
         self.pos = Vec2::new(x / scale_factor, y / scale_factor);
 
+        let cursor = match self
+            .toolbar
+            .hovered_tool(self.pos.x, self.pos.y, Vec2::ZERO)
+        {
+            Some(tool) if tool != self.toolbar.selected => {
+                self.toolbar.hovered = Some(tool);
+                ggez::winit::window::CursorIcon::Hand
+            }
+            _ => {
+                self.toolbar.hovered = None;
+                ggez::winit::window::CursorIcon::Default
+            }
+        };
+        ctx.gfx.window().set_cursor_icon(cursor);
+
+        Ok(())
+    }
+
+    fn mouse_button_down_event(
+        &mut self,
+        ctx: &mut ggez::Context,
+        button: ggez::event::MouseButton,
+        x: f32,
+        y: f32,
+    ) -> Result<(), ggez::GameError> {
+        if button == ggez::event::MouseButton::Left {
+            let scale_factor = ctx.gfx.window().scale_factor() as f32;
+            self.toolbar
+                .handle_click(x / scale_factor, y / scale_factor, Vec2::ZERO);
+        }
+        Ok(())
+    }
+
+    fn key_down_event(
+        &mut self,
+        _ctx: &mut ggez::Context,
+        input: ggez::input::keyboard::KeyInput,
+        _repeated: bool,
+    ) -> Result<(), ggez::GameError> {
+        use crate::toolbar::Tool;
+        use ggez::input::keyboard::KeyCode;
+        match input.keycode {
+            Some(KeyCode::Escape) => self.toolbar.selected = Tool::Cursor,
+            Some(KeyCode::A) => self.toolbar.selected = Tool::AddMarker,
+            Some(KeyCode::D) => self.toolbar.selected = Tool::RemoveMarker,
+            Some(KeyCode::W) => self.toolbar.selected = Tool::ZoomIn,
+            Some(KeyCode::S) => self.toolbar.selected = Tool::ZoomOut,
+            _ => {}
+        }
         Ok(())
     }
 }

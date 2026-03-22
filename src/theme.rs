@@ -108,4 +108,34 @@ impl Theme {
             Theme::Dark => dark::CONTROL_WEAK,
         }
     }
+
+    pub fn toolbar_bg(&self) -> Color {
+        match self {
+            // White toolbar like macOS — clean elevated surface
+            Theme::Light => Color::new(1.0, 1.0, 1.0, 1.0),
+            // Slightly lighter than background — elevated surface in dark mode
+            Theme::Dark => Color::new(44.0 / 255.0, 44.0 / 255.0, 46.0 / 255.0, 1.0),
+        }
+    }
+
+    pub fn toolbar_separator(&self) -> Color {
+        match self {
+            Theme::Light => Color::new(0.0, 0.0, 0.0, 0.12),
+            Theme::Dark => Color::new(0.0, 0.0, 0.0, 0.35),
+        }
+    }
+
+    pub fn btn_selected_bg(&self) -> Color {
+        match self {
+            Theme::Light => light::BLUE,
+            Theme::Dark => dark::BLUE,
+        }
+    }
+
+    pub fn btn_hover_bg(&self) -> Color {
+        match self {
+            Theme::Light => Color::new(0.0, 0.0, 0.0, 0.07),
+            Theme::Dark => Color::new(1.0, 1.0, 1.0, 0.1),
+        }
+    }
 }
