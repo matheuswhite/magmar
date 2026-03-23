@@ -13,7 +13,6 @@ pub struct Tooltip {
     pub value: f32,
     pub width: f32,
     pub height: f32,
-    pub name: String,
     pub color: Color,
     screen_width: f32,
 }
@@ -23,32 +22,20 @@ pub struct TooltipDot {
 }
 
 impl Tooltip {
-    pub fn new(name: String, color: Color, screen: &Screen) -> Self {
+    pub fn new(color: Color, screen_width: f32, value: f32) -> Self {
         Self {
             width: 100.0,
             height: 25.0,
-            name,
             color,
-            value: 0.0,
-            screen_width: screen.width,
+            value,
+            screen_width,
         }
-    }
-
-    pub fn set_name(&mut self, name: String) {
-        self.name = name;
     }
 }
 
 impl TooltipDot {
     pub fn new(color: Color) -> Self {
         Self { color }
-    }
-
-    pub fn is_inside_viewport(mouse: Vec2, position: Vec2, viewport_size: Vec2) -> bool {
-        mouse.x >= position.x
-            && mouse.x <= position.x + viewport_size.x
-            && mouse.y >= position.y
-            && mouse.y <= position.y + viewport_size.y
     }
 
     pub fn get_position_and_value(
@@ -58,12 +45,8 @@ impl TooltipDot {
         signal: &Signal,
         max: SignalCoords,
         min: SignalCoords,
-    ) -> Option<(Vec2, f32)> {
+    ) -> Option<(Vec2, SignalCoords)> {
         if signal.points.is_empty() {
-            return None;
-        }
-
-        if !Self::is_inside_viewport(mouse, viewport_pos, viewport_size) {
             return None;
         }
 
@@ -94,7 +77,7 @@ impl TooltipDot {
         };
         let point_screen = point_viewport + viewport_pos;
 
-        Some((point_screen, closest_point.y))
+        Some((point_screen, closest_point))
     }
 }
 
@@ -111,7 +94,7 @@ impl Drawable for Tooltip {
             } else {
                 format!("{:.2}", self.value)
             };
-        let text = ggez::graphics::Text::new(format!("{}: {}", self.name, value));
+        let text = ggez::graphics::Text::new(value);
         let text_dims = text.measure(ctx).unwrap();
         let width = text_dims.x + 10.0;
 

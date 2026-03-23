@@ -1,18 +1,7 @@
 use crate::{
-    drawable::Drawable,
-    legend::Legend,
-    screen::Screen,
-    signal::{Signal, SignalCoords},
-    stdin_task::Command,
-    theme::Theme,
-    title::Title,
-    toolbar::Toolbar,
-    tooltip::TooltipDot,
-    viewport::Viewport,
-    x_axis::XAxis,
-    x_label::XLabel,
-    y_axis::YAxis,
-    y_label::YLabel,
+    aim::Aim, drawable::Drawable, legend::Legend, screen::Screen, signal::Signal,
+    stdin_task::Command, theme::Theme, title::Title, viewport::Viewport, x_axis::XAxis,
+    x_label::XLabel, y_axis::YAxis, y_label::YLabel,
 };
 use ggez::{
     event::EventHandler,
@@ -22,23 +11,21 @@ use ggez::{
 use std::{path::PathBuf, sync::mpsc::Receiver};
 
 pub struct State {
-    signals: Vec<Signal>,
     viewport: Viewport,
     title: Title,
     x_axis: XAxis,
     y_axis: YAxis,
     x_label: XLabel,
     y_label: YLabel,
-    toolbar: Toolbar,
     pub screen: Screen,
     rx: Receiver<Command>,
-    pos: Vec2,
     save_paths: Vec<PathBuf>,
     pending_screenshot: Option<(Image, Vec<PathBuf>)>,
     screen_image: Option<ScreenImage>,
     theme: Theme,
     legend: Legend,
     is_legend_enabled: bool,
+    aim: Aim,
 }
 
 impl State {
@@ -53,17 +40,15 @@ impl State {
         let legend = Legend::new(&viewport);
 
         Self {
-            signals: Vec::new(),
+            aim: Aim::new(&viewport),
             viewport,
             title: Title::new(&screen, "Magmar"),
             x_axis,
             y_axis,
             x_label,
             y_label,
-            toolbar: Toolbar::new(&screen),
             screen,
             rx,
-            pos: Vec2::ZERO,
             save_paths: Vec::new(),
             pending_screenshot: None,
             screen_image: None,
@@ -71,32 +56,6 @@ impl State {
             legend,
             is_legend_enabled: true,
         }
-    }
-
-    pub fn max(&self) -> SignalCoords {
-        self.signals.iter().fold(
-            SignalCoords {
-                x: f32::MIN,
-                y: f32::MIN,
-            },
-            |max, signal| SignalCoords {
-                x: max.x.max(signal.max.x),
-                y: max.y.max(signal.max.y),
-            },
-        )
-    }
-
-    pub fn min(&self) -> SignalCoords {
-        self.signals.iter().fold(
-            SignalCoords {
-                x: f32::MAX,
-                y: f32::MAX,
-            },
-            |min, signal| SignalCoords {
-                x: min.x.min(signal.min.x),
-                y: min.y.min(signal.min.y),
-            },
-        )
     }
 
     fn save_screenshot(&mut self, ctx: &mut ggez::Context) -> Result<(), ggez::GameError> {
@@ -131,9 +90,9 @@ impl EventHandler for State {
                     break;
                 }
                 Command::NewPoints(points) => {
-                    if self.signals.len() + 1 < points.len() {
-                        for i in self.signals.len()..(points.len() - 1) {
-                            self.signals.push(Signal::new(
+                    if self.aim.signals().len() + 1 < points.len() {
+                        for i in self.aim.signals().len()..(points.len() - 1) {
+                            self.aim.signals_mut().push(Signal::new(
                                 i,
                                 &self.viewport,
                                 self.theme,
@@ -148,14 +107,15 @@ impl EventHandler for State {
                         continue;
                     };
 
-                    for (point, signal) in points.zip(self.signals.iter_mut()) {
+                    for (point, signal) in points.zip(self.aim.signals_mut().iter_mut()) {
                         signal.add_point(time, point);
                     }
                 }
                 Command::NewNames(names) => {
-                    if self.signals.len() + 1 < names.len() {
-                        for i in self.signals.len()..(names.len() - 1) {
-                            self.signals.push(Signal::new(
+                    let signals_len = self.aim.signals().len();
+                    if signals_len + 1 < names.len() {
+                        for i in signals_len..(names.len() - 1) {
+                            self.aim.signals_mut().push(Signal::new(
                                 i,
                                 &self.viewport,
                                 self.theme,
@@ -169,7 +129,7 @@ impl EventHandler for State {
                         self.x_label.set_text(x_name);
                     }
 
-                    for (name, signal) in names.zip(self.signals.iter_mut()) {
+                    for (name, signal) in names.zip(self.aim.signals_mut().iter_mut()) {
                         signal.set_name(name.clone());
                         self.legend.add_signal(name, signal.color);
                     }
@@ -204,32 +164,24 @@ impl EventHandler for State {
             self.screen.height,
         ));
 
-        let max = self.max();
-        let min = self.min();
+        let max = self.aim.max();
+        let min = self.aim.min();
 
         self.x_axis.set_min_max(min.x, max.x);
         self.y_axis.set_min_max(min.y, max.y);
 
-        self.toolbar.draw(Vec2::ZERO, &mut canvas, ctx, self.theme);
-        self.title.draw(
-            Vec2 {
-                x: 0.0,
-                y: self.screen.height * Toolbar::HEIGHT_PERCENT,
-            },
-            &mut canvas,
-            ctx,
-            self.theme,
-        );
+        self.title
+            .draw(Vec2 { x: 0.0, y: 0.0 }, &mut canvas, ctx, self.theme);
         let viewport_pos = Vec2 {
             x: self.screen.width * (YLabel::WIDTH_PERCENT + YAxis::WIDTH_PERCENT),
-            y: self.screen.height * (Toolbar::HEIGHT_PERCENT + Title::HEIGHT_PERCENT),
+            y: self.screen.height * Title::HEIGHT_PERCENT,
         };
         self.viewport
             .draw(viewport_pos, &mut canvas, ctx, self.theme);
         self.y_label.draw(
             Vec2 {
                 x: 0.0,
-                y: self.screen.height * (Toolbar::HEIGHT_PERCENT + Title::HEIGHT_PERCENT),
+                y: self.screen.height * Title::HEIGHT_PERCENT,
             },
             &mut canvas,
             ctx,
@@ -238,7 +190,7 @@ impl EventHandler for State {
         self.y_axis.draw(
             Vec2 {
                 x: self.screen.width * YLabel::WIDTH_PERCENT,
-                y: self.screen.height * (Toolbar::HEIGHT_PERCENT + Title::HEIGHT_PERCENT),
+                y: self.screen.height * Title::HEIGHT_PERCENT,
             },
             &mut canvas,
             ctx,
@@ -247,8 +199,7 @@ impl EventHandler for State {
         self.x_axis.draw(
             Vec2 {
                 x: self.screen.width * (YLabel::WIDTH_PERCENT + YAxis::WIDTH_PERCENT),
-                y: self.viewport.height
-                    + (self.screen.height * (Toolbar::HEIGHT_PERCENT + Title::HEIGHT_PERCENT)),
+                y: self.viewport.height + (self.screen.height * Title::HEIGHT_PERCENT),
             },
             &mut canvas,
             ctx,
@@ -258,45 +209,32 @@ impl EventHandler for State {
             Vec2 {
                 x: self.screen.width * (YLabel::WIDTH_PERCENT + YAxis::WIDTH_PERCENT),
                 y: self.viewport.height
-                    + (self.screen.height
-                        * (Toolbar::HEIGHT_PERCENT
-                            + Title::HEIGHT_PERCENT
-                            + XAxis::HEIGHT_PERCENT)),
+                    + (self.screen.height * (Title::HEIGHT_PERCENT + XAxis::HEIGHT_PERCENT)),
             },
             &mut canvas,
             ctx,
             self.theme,
         );
 
-        let mouse = Vec2 {
-            x: self.pos.x,
-            y: self.pos.y,
-        };
-
-        let mut pos_values = vec![];
-        for signal in &mut self.signals {
+        for signal in self.aim.signals_mut() {
             signal.set_global_max_min(max, min);
             signal.draw(viewport_pos, &mut canvas, ctx, self.theme);
 
-            let Some((position, value)) = TooltipDot::get_position_and_value(
-                mouse,
-                viewport_pos,
-                self.viewport.size(),
-                signal,
-                max,
-                min,
-            ) else {
-                continue;
-            };
-            pos_values.push((position, value));
-            signal
-                .tooltip_dot
-                .draw(position, &mut canvas, ctx, self.theme);
+            for tooltip_info in signal.get_tooltips_info() {
+                tooltip_info
+                    .dot
+                    .draw(tooltip_info.position, &mut canvas, ctx, self.theme);
+            }
         }
 
-        for (signal, (pos, value)) in self.signals.iter_mut().zip(pos_values) {
-            signal.tooltip.value = value;
-            signal.tooltip.draw(pos, &mut canvas, ctx, self.theme);
+        self.aim.draw(viewport_pos, &mut canvas, ctx, self.theme);
+
+        for signal in self.aim.signals() {
+            for tooltip_info in signal.get_tooltips_info() {
+                tooltip_info
+                    .tooltip
+                    .draw(tooltip_info.position, &mut canvas, ctx, self.theme);
+            }
         }
 
         if self.is_legend_enabled {
@@ -340,21 +278,19 @@ impl EventHandler for State {
     ) -> Result<(), ggez::GameError> {
         // ggez gives mouse coordinates in physical pixels; convert to logical units.
         let scale_factor = ctx.gfx.window().scale_factor() as f32;
-        self.pos = Vec2::new(x / scale_factor, y / scale_factor);
+        let pos = Vec2::new(x / scale_factor, y / scale_factor);
+        self.aim.set_mouse(pos);
 
-        let cursor = match self
-            .toolbar
-            .hovered_tool(self.pos.x, self.pos.y, Vec2::ZERO)
-        {
-            Some(tool) if tool != self.toolbar.selected => {
-                self.toolbar.hovered = Some(tool);
-                ggez::winit::window::CursorIcon::Hand
-            }
-            _ => {
-                self.toolbar.hovered = None;
-                ggez::winit::window::CursorIcon::Default
-            }
+        let viewport_pos = Vec2 {
+            x: self.screen.width * (YLabel::WIDTH_PERCENT + YAxis::WIDTH_PERCENT),
+            y: self.screen.height * Title::HEIGHT_PERCENT,
         };
+        let cursor = if self.aim.is_mouse_inside_viewport(viewport_pos) {
+            ggez::winit::window::CursorIcon::Cell
+        } else {
+            ggez::winit::window::CursorIcon::Default
+        };
+
         ctx.gfx.window().set_cursor_icon(cursor);
 
         Ok(())
@@ -362,16 +298,20 @@ impl EventHandler for State {
 
     fn mouse_button_down_event(
         &mut self,
-        ctx: &mut ggez::Context,
+        _ctx: &mut ggez::Context,
         button: ggez::event::MouseButton,
-        x: f32,
-        y: f32,
+        _x: f32,
+        _y: f32,
     ) -> Result<(), ggez::GameError> {
         if button == ggez::event::MouseButton::Left {
-            let scale_factor = ctx.gfx.window().scale_factor() as f32;
-            self.toolbar
-                .handle_click(x / scale_factor, y / scale_factor, Vec2::ZERO);
+            let viewport_pos = Vec2 {
+                x: self.screen.width * (YLabel::WIDTH_PERCENT + YAxis::WIDTH_PERCENT),
+                y: self.screen.height * Title::HEIGHT_PERCENT,
+            };
+
+            self.aim.mark_tooltip(viewport_pos);
         }
+
         Ok(())
     }
 
@@ -381,14 +321,9 @@ impl EventHandler for State {
         input: ggez::input::keyboard::KeyInput,
         _repeated: bool,
     ) -> Result<(), ggez::GameError> {
-        use crate::toolbar::Tool;
         use ggez::input::keyboard::KeyCode;
         match input.keycode {
-            Some(KeyCode::Escape) => self.toolbar.selected = Tool::Cursor,
-            Some(KeyCode::A) => self.toolbar.selected = Tool::AddMarker,
-            Some(KeyCode::D) => self.toolbar.selected = Tool::RemoveMarker,
-            Some(KeyCode::W) => self.toolbar.selected = Tool::ZoomIn,
-            Some(KeyCode::S) => self.toolbar.selected = Tool::ZoomOut,
+            Some(KeyCode::Tab) => self.aim.next_signal(),
             _ => {}
         }
         Ok(())

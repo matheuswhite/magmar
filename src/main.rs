@@ -1,6 +1,7 @@
 use crate::{screen::Screen, state::State, stdin_task::read_stdin_task, theme::Theme};
 use clap::Parser;
 
+mod aim;
 mod drawable;
 mod legend;
 mod screen;
@@ -9,7 +10,6 @@ mod state;
 mod stdin_task;
 mod theme;
 mod title;
-mod toolbar;
 mod tooltip;
 mod viewport;
 mod x_axis;

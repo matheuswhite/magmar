@@ -11,6 +11,12 @@ use ggez::{
     graphics::{Canvas, Color},
 };
 
+pub struct TooltipInfo {
+    pub tooltip: Tooltip,
+    pub dot: TooltipDot,
+    pub position: Vec2,
+}
+
 pub struct Signal {
     pub color: Color,
     pub points: Vec<SignalCoords>,
@@ -20,8 +26,8 @@ pub struct Signal {
     global_min: SignalCoords,
     pub name: String,
     size: Vec2,
-    pub tooltip: Tooltip,
-    pub tooltip_dot: TooltipDot,
+    screen_width: f32,
+    tooltips: Vec<TooltipInfo>,
 }
 
 #[derive(Clone, Copy)]
@@ -53,14 +59,26 @@ impl Signal {
                 x: viweport.width,
                 y: viweport.height,
             },
-            tooltip: Tooltip::new(name, color, screen),
-            tooltip_dot: TooltipDot::new(color),
+            screen_width: screen.width,
+            tooltips: vec![],
         }
+    }
+
+    pub fn mark_tooltip(&mut self, position: Vec2, value: f32) {
+        let tooltip_info = TooltipInfo {
+            tooltip: Tooltip::new(self.color, self.screen_width, value),
+            dot: TooltipDot::new(self.color),
+            position,
+        };
+        self.tooltips.push(tooltip_info);
+    }
+
+    pub fn get_tooltips_info(&self) -> &[TooltipInfo] {
+        &self.tooltips
     }
 
     pub fn set_name(&mut self, name: String) {
         self.name = name.clone();
-        self.tooltip.set_name(name);
     }
 
     pub fn add_point(&mut self, x: f32, y: f32) {
