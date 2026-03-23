@@ -11,8 +11,6 @@ use ggez::{
 
 pub struct Tooltip {
     pub value: f32,
-    pub width: f32,
-    pub height: f32,
     pub color: Color,
     screen_width: f32,
 }
@@ -24,8 +22,6 @@ pub struct TooltipDot {
 impl Tooltip {
     pub fn new(color: Color, screen_width: f32, value: f32) -> Self {
         Self {
-            width: 100.0,
-            height: 25.0,
             color,
             value,
             screen_width,
@@ -83,11 +79,6 @@ impl TooltipDot {
 
 impl Drawable for Tooltip {
     fn draw(&self, position: Vec2, canvas: &mut Canvas, ctx: &mut ggez::Context, theme: Theme) {
-        let mut tooltip_pos = ScreenCoords {
-            x: position.x - self.width / 2.0,
-            y: position.y - self.height - 10.0,
-        };
-
         let value =
             if self.value.abs() != 0.0 && (self.value.abs() < 0.01 || self.value.abs() >= 100.0) {
                 format!("{:.2e}", self.value)
@@ -96,7 +87,14 @@ impl Drawable for Tooltip {
             };
         let text = ggez::graphics::Text::new(value);
         let text_dims = text.measure(ctx).unwrap();
-        let width = text_dims.x + 10.0;
+        let offset = Vec2 { x: 10.0, y: 5.0 };
+        let width = text_dims.x + offset.x;
+        let height = text_dims.y + offset.y;
+
+        let mut tooltip_pos = ScreenCoords {
+            x: position.x - width / 2.0,
+            y: position.y - height - 10.0,
+        };
 
         if tooltip_pos.x + width >= self.screen_width + Screen::SCREEN_WIDTH_OFFSET {
             let overflow =
@@ -107,15 +105,15 @@ impl Drawable for Tooltip {
         let rect = ggez::graphics::Mesh::new_rectangle(
             ctx,
             ggez::graphics::DrawMode::fill(),
-            ggez::graphics::Rect::new(tooltip_pos.x, tooltip_pos.y, width, self.height),
+            ggez::graphics::Rect::new(tooltip_pos.x, tooltip_pos.y, width, height),
             theme.control_weak(),
         )
         .unwrap();
         canvas.draw(&rect, ggez::graphics::DrawParam::default());
 
         let dest_point = ggez::mint::Point2 {
-            x: tooltip_pos.x + 5.0,
-            y: tooltip_pos.y + 5.0,
+            x: tooltip_pos.x + offset.x / 2.0,
+            y: tooltip_pos.y + offset.y / 2.0,
         };
         canvas.draw(
             &text,
