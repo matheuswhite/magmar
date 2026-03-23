@@ -128,6 +128,7 @@ impl Drawable for Tooltip {
 
 impl Drawable for TooltipDot {
     fn draw(&self, position: Vec2, canvas: &mut Canvas, ctx: &mut ggez::Context, _theme: Theme) {
+        let color_offset = 0.15;
         let circ = ggez::graphics::Mesh::new_circle(
             ctx,
             ggez::graphics::DrawMode::fill(),
@@ -137,7 +138,12 @@ impl Drawable for TooltipDot {
             },
             5.0,
             0.1,
-            self.color,
+            Color::new(
+                self.color.r - color_offset,
+                self.color.g - color_offset,
+                self.color.b - color_offset,
+                1.0,
+            ),
         )
         .unwrap();
         canvas.draw(&circ, ggez::graphics::DrawParam::default());

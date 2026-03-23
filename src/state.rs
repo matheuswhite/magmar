@@ -303,13 +303,15 @@ impl EventHandler for State {
         _x: f32,
         _y: f32,
     ) -> Result<(), ggez::GameError> {
-        if button == ggez::event::MouseButton::Left {
-            let viewport_pos = Vec2 {
-                x: self.screen.width * (YLabel::WIDTH_PERCENT + YAxis::WIDTH_PERCENT),
-                y: self.screen.height * Title::HEIGHT_PERCENT,
-            };
+        let viewport_pos = Vec2 {
+            x: self.screen.width * (YLabel::WIDTH_PERCENT + YAxis::WIDTH_PERCENT),
+            y: self.screen.height * Title::HEIGHT_PERCENT,
+        };
 
+        if button == ggez::event::MouseButton::Left {
             self.aim.mark_tooltip(viewport_pos);
+        } else if button == ggez::event::MouseButton::Right {
+            self.aim.remove_tooltip(viewport_pos);
         }
 
         Ok(())

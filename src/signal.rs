@@ -73,6 +73,20 @@ impl Signal {
         self.tooltips.push(tooltip_info);
     }
 
+    pub fn remove_tooltip(&mut self, position: Vec2) {
+        let Some(tooltip_index) = self
+            .tooltips
+            .iter()
+            .rev()
+            .position(|t| (t.position.x - position.x).abs() <= 5.0)
+        else {
+            return;
+        };
+        let tooltip_index = self.tooltips.len() - 1 - tooltip_index;
+
+        self.tooltips.remove(tooltip_index);
+    }
+
     pub fn get_tooltips_info(&self) -> &[TooltipInfo] {
         &self.tooltips
     }

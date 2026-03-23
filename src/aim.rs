@@ -95,6 +95,33 @@ impl Aim {
         signal.mark_tooltip(pos, value.y);
     }
 
+    pub fn remove_tooltip(&mut self, viewport_position: Vec2) {
+        if self.signals.is_empty() {
+            return;
+        }
+
+        if !self.is_mouse_inside_viewport(viewport_position) {
+            return;
+        }
+
+        let max = self.max();
+        let min = self.min();
+
+        let signal = &mut self.signals[self.signal_index];
+
+        let (pos, _) = TooltipDot::get_position_and_value(
+            self.mouse,
+            viewport_position,
+            self.viewport_size,
+            signal,
+            max,
+            min,
+        )
+        .unwrap();
+
+        signal.remove_tooltip(pos);
+    }
+
     pub fn signals_mut(&mut self) -> &mut Vec<Signal> {
         &mut self.signals
     }
