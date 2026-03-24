@@ -7,6 +7,7 @@ use ggez::{
     event::EventHandler,
     glam::Vec2,
     graphics::{Canvas, DrawParam, Image, ImageFormat, Rect, ScreenImage},
+    input::keyboard::KeyCode,
 };
 use std::{path::PathBuf, sync::mpsc::Receiver};
 
@@ -90,8 +91,9 @@ impl EventHandler for State {
                     break;
                 }
                 Command::NewPoints(points) => {
-                    if self.aim.signals().len() + 1 < points.len() {
-                        for i in self.aim.signals().len()..(points.len() - 1) {
+                    let signals_len = self.aim.signals().len();
+                    if signals_len + 1 < points.len() {
+                        for i in signals_len..(points.len() - 1) {
                             self.aim.signals_mut().push(Signal::new(
                                 i,
                                 &self.viewport,
@@ -324,10 +326,49 @@ impl EventHandler for State {
         _repeated: bool,
     ) -> Result<(), ggez::GameError> {
         use ggez::input::keyboard::KeyCode;
+
+        let viewport_pos = Vec2 {
+            x: self.screen.width * (YLabel::WIDTH_PERCENT + YAxis::WIDTH_PERCENT),
+            y: self.screen.height * Title::HEIGHT_PERCENT,
+        };
+
         match input.keycode {
             Some(KeyCode::Tab) => self.aim.next_signal(),
+            Some(KeyCode::Z) => self.aim.reset_zoom(viewport_pos),
             _ => {}
         }
+
+        self.title.set_zoom(self.aim.zoom());
+
+        Ok(())
+    }
+
+    fn mouse_wheel_event(
+        &mut self,
+        ctx: &mut ggez::Context,
+        _x: f32,
+        y: f32,
+    ) -> Result<(), ggez::GameError> {
+        let viewport_pos = Vec2 {
+            x: self.screen.width * (YLabel::WIDTH_PERCENT + YAxis::WIDTH_PERCENT),
+            y: self.screen.height * Title::HEIGHT_PERCENT,
+        };
+
+        if y == 0.0
+            || !(ctx.keyboard.is_key_pressed(KeyCode::RControl)
+                || ctx.keyboard.is_key_pressed(KeyCode::LControl))
+        {
+            return Ok(());
+        }
+
+        if y > 0.0 {
+            self.aim.zoom_in(viewport_pos);
+        } else {
+            self.aim.zoom_out(viewport_pos);
+        }
+
+        self.title.set_zoom(self.aim.zoom());
+
         Ok(())
     }
 }

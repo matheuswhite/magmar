@@ -42,7 +42,7 @@ impl TooltipDot {
         max: SignalCoords,
         min: SignalCoords,
     ) -> Option<(Vec2, SignalCoords)> {
-        if signal.points.is_empty() {
+        if signal.points().is_empty() {
             return None;
         }
 
@@ -55,8 +55,12 @@ impl TooltipDot {
             x: mouse_viewport.x / viewport_size.x,
             y: mouse_viewport.y / viewport_size.y,
         };
+
+        let signal_min = signal.min();
+        let signal_max = signal.max();
+
         let mouse_signal_t =
-            mouse_viewport_normalized.x * (signal.max.x - signal.min.x) + signal.min.x;
+            mouse_viewport_normalized.x * (signal_max.x - signal_min.x) + signal_min.x;
 
         let closest_point = SignalCoords {
             x: mouse_signal_t,

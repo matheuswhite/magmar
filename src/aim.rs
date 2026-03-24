@@ -14,6 +14,7 @@ pub struct Aim {
     viewport_size: Vec2,
     mouse: Vec2,
     signals: Vec<Signal>,
+    zoom: f32,
 }
 
 impl Aim {
@@ -23,6 +24,7 @@ impl Aim {
             viewport_size: viewport.size(),
             mouse: Vec2::ZERO,
             signals: vec![],
+            zoom: 100.0,
         }
     }
 
@@ -33,8 +35,8 @@ impl Aim {
                 y: f32::MIN,
             },
             |max, signal| SignalCoords {
-                x: max.x.max(signal.max.x),
-                y: max.y.max(signal.max.y),
+                x: max.x.max(signal.max().x),
+                y: max.y.max(signal.max().y),
             },
         )
     }
@@ -46,8 +48,8 @@ impl Aim {
                 y: f32::MAX,
             },
             |min, signal| SignalCoords {
-                x: min.x.min(signal.min.x),
-                y: min.y.min(signal.min.y),
+                x: min.x.min(signal.min().x),
+                y: min.y.min(signal.min().y),
             },
         )
     }
@@ -128,6 +130,52 @@ impl Aim {
 
     pub fn signals(&self) -> &[Signal] {
         &self.signals
+    }
+
+    pub fn zoom_in(&mut self, viewport_position: Vec2) {
+        if self.zoom >= 600.0 {
+            return;
+        }
+        self.zoom += 1.0;
+
+        if !self.is_mouse_inside_viewport(viewport_position) {
+            return;
+        }
+
+        let drop_left_percent = (self.mouse.x - viewport_position.x) / self.viewport_size.x;
+
+        for signal in &mut self.signals {
+            signal.zoom_in(drop_left_percent, 1.0);
+        }
+    }
+
+    pub fn zoom_out(&mut self, viewport_position: Vec2) {
+        if self.zoom <= 100.0 {
+            return;
+        }
+        self.zoom -= 1.0;
+
+        if !self.is_mouse_inside_viewport(viewport_position) {
+            return;
+        }
+
+        for signal in &mut self.signals {
+            signal.zoom_out(1.0);
+        }
+    }
+
+    pub fn reset_zoom(&mut self, viewport_position: Vec2) {
+        if !self.is_mouse_inside_viewport(viewport_position) {
+            return;
+        }
+
+        for signal in &mut self.signals {
+            signal.reset_zoom();
+        }
+    }
+
+    pub fn zoom(&self) -> f32 {
+        self.zoom
     }
 }
 

@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crate::{
     drawable::Drawable,
     screen::Screen,
@@ -5,7 +7,6 @@ use crate::{
     tooltip::{Tooltip, TooltipDot},
     viewport::Viewport,
 };
-use core::f32;
 use ggez::{
     glam::Vec2,
     graphics::{Canvas, Color},
@@ -19,18 +20,19 @@ pub struct TooltipInfo {
 
 pub struct Signal {
     pub color: Color,
-    pub points: Vec<SignalCoords>,
-    pub min: SignalCoords,
-    pub max: SignalCoords,
+    points: Vec<SignalCoords>,
     global_max: SignalCoords,
     global_min: SignalCoords,
     pub name: String,
     size: Vec2,
     screen_width: f32,
     tooltips: Vec<TooltipInfo>,
+    zoom: f32,
+    points_with_zoom: Option<VecDeque<SignalCoords>>,
+    zoom_history: Vec<(Vec<SignalCoords>, Vec<SignalCoords>)>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct SignalCoords {
     pub x: f32,
     pub y: f32,
@@ -44,14 +46,6 @@ impl Signal {
         Self {
             color,
             points: Vec::new(),
-            min: SignalCoords {
-                x: f32::MAX,
-                y: f32::MAX,
-            },
-            max: SignalCoords {
-                x: f32::MIN,
-                y: f32::MIN,
-            },
             global_max: SignalCoords { x: 0.0, y: 0.0 },
             global_min: SignalCoords { x: 0.0, y: 0.0 },
             name: name.clone(),
@@ -61,6 +55,9 @@ impl Signal {
             },
             screen_width: screen.width,
             tooltips: vec![],
+            points_with_zoom: None,
+            zoom: 100.0,
+            zoom_history: vec![],
         }
     }
 
@@ -97,19 +94,13 @@ impl Signal {
 
     pub fn add_point(&mut self, x: f32, y: f32) {
         let point = SignalCoords { x, y };
+
         self.points.push(point);
 
-        if point.x < self.min.x {
-            self.min.x = point.x;
-        }
-        if point.y < self.min.y {
-            self.min.y = point.y;
-        }
-        if point.x > self.max.x {
-            self.max.x = point.x;
-        }
-        if point.y > self.max.y {
-            self.max.y = point.y;
+        if let Some(points_with_zoom) = self.points_with_zoom.as_mut() {
+            points_with_zoom.push_back(point);
+        } else {
+            self.zoom_history.clear();
         }
     }
 
@@ -119,9 +110,9 @@ impl Signal {
     }
 
     pub fn value_at(&self, t: f32) -> f32 {
-        for i in 0..self.points.len() - 1 {
-            let p1 = self.points[i];
-            let p2 = self.points[i + 1];
+        for i in 0..self.points().len() - 1 {
+            let p1 = self.points()[i];
+            let p2 = self.points()[i + 1];
 
             if t <= p2.x {
                 let alpha = (t - p1.x) / (p2.x - p1.x);
@@ -131,6 +122,104 @@ impl Signal {
         }
 
         0.0
+    }
+
+    pub fn min(&self) -> SignalCoords {
+        self.points().iter().fold(
+            SignalCoords {
+                x: f32::MAX,
+                y: f32::MAX,
+            },
+            |current, coords| SignalCoords {
+                x: current.x.min(coords.x),
+                y: current.y.min(coords.y),
+            },
+        )
+    }
+
+    pub fn max(&self) -> SignalCoords {
+        self.points().iter().fold(
+            SignalCoords {
+                x: f32::MIN,
+                y: f32::MIN,
+            },
+            |current, coords| SignalCoords {
+                x: current.x.max(coords.x),
+                y: current.y.max(coords.y),
+            },
+        )
+    }
+
+    pub fn zoom_in(&mut self, drop_left_percent: f32, zoom_factor: f32) {
+        self.zoom += zoom_factor;
+
+        if self.points_with_zoom.is_none() {
+            self.points_with_zoom = Some(VecDeque::from_iter(self.points.clone()));
+        }
+
+        let points_with_zoom = self.points_with_zoom.as_mut().unwrap();
+
+        let dropped_samples = points_with_zoom.len() as f32 * (zoom_factor / 100.0);
+
+        let drop_left = (dropped_samples * drop_left_percent) as usize;
+        let drop_right = (dropped_samples * (1.0 - drop_left_percent)) as usize;
+
+        let mut left = vec![];
+        for _ in 0..drop_left {
+            let Some(item) = points_with_zoom.pop_front() else {
+                continue;
+            };
+
+            left.push(item);
+        }
+
+        let mut right = vec![];
+        for _ in 0..drop_right {
+            let Some(item) = points_with_zoom.pop_back() else {
+                continue;
+            };
+
+            right.push(item);
+        }
+
+        self.zoom_history.push((left, right));
+    }
+
+    pub fn zoom_out(&mut self, zoom_factor: f32) {
+        self.zoom -= zoom_factor;
+
+        if self.zoom == 100.0 {
+            self.points_with_zoom = None;
+            self.zoom_history.clear();
+
+            return;
+        }
+
+        let Some((left, right)) = self.zoom_history.pop() else {
+            return;
+        };
+
+        let points_with_zoom = self.points_with_zoom.as_mut().unwrap();
+
+        for item in left {
+            points_with_zoom.push_front(item);
+        }
+
+        for item in right {
+            points_with_zoom.push_back(item);
+        }
+    }
+
+    pub fn reset_zoom(&mut self) {
+        self.points_with_zoom = None;
+        self.zoom_history.clear();
+    }
+
+    pub fn points(&self) -> &[SignalCoords] {
+        match self.points_with_zoom.as_ref() {
+            Some(points_with_zoom) => points_with_zoom.as_slices().0,
+            None => &self.points,
+        }
     }
 }
 
@@ -163,19 +252,14 @@ impl Drawable for Signal {
         ctx: &mut ggez::Context,
         _theme: Theme,
     ) {
-        let position = Vec2 {
-            x: position.x,
-            y: position.y,
-        };
-
-        if self.points.len() < 2 {
+        if self.points().len() < 2 {
             return;
         }
 
         let points = self
-            .points
+            .points()
             .iter()
-            .map(|&point| {
+            .map(|point| {
                 let normalized = point.normalize(self.global_max, self.global_min);
                 let viewport_scaled = Vec2 {
                     x: normalized.x * self.size.x,

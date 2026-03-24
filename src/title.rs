@@ -7,6 +7,7 @@ use ggez::{
 pub struct Title {
     size: Vec2,
     text: Text,
+    title: String,
 }
 
 impl Title {
@@ -19,7 +20,18 @@ impl Title {
                 y: screen.height * Self::HEIGHT_PERCENT,
             },
             text: Text::new(title.as_ref()),
+            title: title.as_ref().to_string(),
         }
+    }
+
+    pub fn set_zoom(&mut self, zoom: f32) {
+        let text = if zoom == 100.0 {
+            self.title.clone()
+        } else {
+            format!("{} ({}%)", self.title, zoom as usize)
+        };
+
+        self.text = Text::new(text);
     }
 }
 
