@@ -94,7 +94,7 @@ impl Aim {
         )
         .unwrap();
 
-        signal.mark_tooltip(pos, value.y);
+        signal.mark_tooltip(pos, value.x, value.y);
     }
 
     pub fn remove_tooltip(&mut self, viewport_position: Vec2) {
@@ -132,6 +132,21 @@ impl Aim {
         &self.signals
     }
 
+    fn update_global_max_min(&mut self) {
+        let max = self.max();
+        let min = self.min();
+
+        for signal in &mut self.signals {
+            signal.set_global_max_min(max, min);
+        }
+    }
+
+    fn move_tooltips(&mut self, viewport_pos: Vec2) {
+        for signal in &mut self.signals {
+            signal.move_tooltips(viewport_pos);
+        }
+    }
+
     pub fn zoom_in(&mut self, viewport_position: Vec2) {
         if self.zoom >= 600.0 {
             return;
@@ -147,6 +162,9 @@ impl Aim {
         for signal in &mut self.signals {
             signal.zoom_in(drop_left_percent, 1.0);
         }
+
+        self.update_global_max_min();
+        self.move_tooltips(viewport_position);
     }
 
     pub fn zoom_out(&mut self, viewport_position: Vec2) {
@@ -162,6 +180,9 @@ impl Aim {
         for signal in &mut self.signals {
             signal.zoom_out(1.0);
         }
+
+        self.update_global_max_min();
+        self.move_tooltips(viewport_position);
     }
 
     pub fn reset_zoom(&mut self, viewport_position: Vec2) {
@@ -172,6 +193,9 @@ impl Aim {
         for signal in &mut self.signals {
             signal.reset_zoom();
         }
+
+        self.update_global_max_min();
+        self.move_tooltips(viewport_position);
     }
 
     pub fn zoom(&self) -> f32 {

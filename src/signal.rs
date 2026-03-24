@@ -61,9 +61,9 @@ impl Signal {
         }
     }
 
-    pub fn mark_tooltip(&mut self, position: Vec2, value: f32) {
+    pub fn mark_tooltip(&mut self, position: Vec2, time: f32, value: f32) {
         let tooltip_info = TooltipInfo {
-            tooltip: Tooltip::new(self.color, self.screen_width, value),
+            tooltip: Tooltip::new(self.color, self.screen_width, time, value),
             dot: TooltipDot::new(self.color),
             position,
         };
@@ -150,6 +150,19 @@ impl Signal {
         )
     }
 
+    pub fn move_tooltips(&mut self, viewport_pos: Vec2) {
+        for tooltip_info in &mut self.tooltips {
+            let tooltip_pos = tooltip_info.tooltip.coords();
+            let tooltip_pos = tooltip_pos.normalize(self.global_max, self.global_min);
+            let tooltip_pos = Vec2 {
+                x: tooltip_pos.x * self.size.x + viewport_pos.x,
+                y: (1.0 - tooltip_pos.y) * self.size.y + viewport_pos.y,
+            };
+
+            tooltip_info.position = tooltip_pos;
+        }
+    }
+
     pub fn zoom_in(&mut self, drop_left_percent: f32, zoom_factor: f32) {
         self.zoom += zoom_factor;
 
@@ -234,13 +247,13 @@ impl SignalCoords {
         let y_range = max.y - min.y;
 
         let x = if x_range.abs() <= f32::EPSILON {
-            0.0
+            self.x
         } else {
             (self.x - min.x) / x_range
         };
 
         let y = if y_range.abs() <= f32::EPSILON {
-            0.0
+            self.y
         } else {
             (self.y - min.y) / y_range
         };

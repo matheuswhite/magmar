@@ -223,6 +223,10 @@ impl EventHandler for State {
             signal.draw(viewport_pos, &mut canvas, ctx, self.theme);
 
             for tooltip_info in signal.get_tooltips_info() {
+                if !self.viewport.is_inside(viewport_pos, tooltip_info.position) {
+                    continue;
+                }
+
                 tooltip_info
                     .dot
                     .draw(tooltip_info.position, &mut canvas, ctx, self.theme);
@@ -233,6 +237,10 @@ impl EventHandler for State {
 
         for signal in self.aim.signals() {
             for tooltip_info in signal.get_tooltips_info() {
+                if !self.viewport.is_inside(viewport_pos, tooltip_info.position) {
+                    continue;
+                }
+
                 tooltip_info
                     .tooltip
                     .draw(tooltip_info.position, &mut canvas, ctx, self.theme);

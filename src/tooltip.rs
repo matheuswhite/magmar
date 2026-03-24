@@ -10,7 +10,7 @@ use ggez::{
 };
 
 pub struct Tooltip {
-    pub value: f32,
+    coords: SignalCoords,
     pub color: Color,
     screen_width: f32,
 }
@@ -20,12 +20,16 @@ pub struct TooltipDot {
 }
 
 impl Tooltip {
-    pub fn new(color: Color, screen_width: f32, value: f32) -> Self {
+    pub fn new(color: Color, screen_width: f32, time: f32, value: f32) -> Self {
         Self {
             color,
-            value,
+            coords: SignalCoords { x: time, y: value },
             screen_width,
         }
+    }
+
+    pub fn coords(&self) -> SignalCoords {
+        self.coords
     }
 }
 
@@ -83,12 +87,13 @@ impl TooltipDot {
 
 impl Drawable for Tooltip {
     fn draw(&self, position: Vec2, canvas: &mut Canvas, ctx: &mut ggez::Context, theme: Theme) {
-        let value =
-            if self.value.abs() != 0.0 && (self.value.abs() < 0.01 || self.value.abs() >= 100.0) {
-                format!("{:.2e}", self.value)
-            } else {
-                format!("{:.2}", self.value)
-            };
+        let value = if self.coords.y.abs() != 0.0
+            && (self.coords.y.abs() < 0.01 || self.coords.y.abs() >= 100.0)
+        {
+            format!("{:.2e}", self.coords.y)
+        } else {
+            format!("{:.2}", self.coords.y)
+        };
         let text = ggez::graphics::Text::new(value);
         let text_dims = text.measure(ctx).unwrap();
         let offset = Vec2 { x: 10.0, y: 5.0 };

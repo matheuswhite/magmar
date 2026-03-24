@@ -24,6 +24,14 @@ impl Viewport {
     pub fn size(&self) -> Vec2 {
         Vec2::new(self.width, self.height)
     }
+
+    pub fn is_inside(&self, viewport_position: Vec2, position: Vec2) -> bool {
+        let relative_pos = position - viewport_position;
+        relative_pos.x >= 0.0
+            && relative_pos.y >= 0.0
+            && relative_pos.x <= self.width
+            && relative_pos.y <= self.height
+    }
 }
 
 impl Drawable for Viewport {
