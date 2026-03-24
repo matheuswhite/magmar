@@ -158,11 +158,16 @@ impl Signal {
         }
 
         let points_with_zoom = self.points_with_zoom.as_mut().unwrap();
+        let points_with_zoom_len = points_with_zoom.len();
 
-        let dropped_samples = points_with_zoom.len() as f32 * (zoom_factor / 100.0);
+        let dropped_samples = points_with_zoom_len as f32 * (zoom_factor / 100.0);
 
-        let drop_left = (dropped_samples * drop_left_percent) as usize;
-        let drop_right = (dropped_samples * (1.0 - drop_left_percent)) as usize;
+        let drop_left = ((dropped_samples * drop_left_percent) as usize).max(1);
+        let drop_right = ((dropped_samples * (1.0 - drop_left_percent)) as usize).max(1);
+
+        if points_with_zoom_len.saturating_sub(drop_left + drop_right) < 2 {
+            return;
+        }
 
         let mut left = vec![];
         for _ in 0..drop_left {
@@ -195,17 +200,17 @@ impl Signal {
             return;
         }
 
+        let points_with_zoom = self.points_with_zoom.as_mut().unwrap();
+
         let Some((left, right)) = self.zoom_history.pop() else {
             return;
         };
 
-        let points_with_zoom = self.points_with_zoom.as_mut().unwrap();
-
-        for item in left {
+        for item in left.into_iter().rev() {
             points_with_zoom.push_front(item);
         }
 
-        for item in right {
+        for item in right.into_iter().rev() {
             points_with_zoom.push_back(item);
         }
     }
