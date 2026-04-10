@@ -139,8 +139,12 @@ impl EventHandler for State {
                 Command::LegendPos(pos) => {
                     self.is_legend_enabled = true;
                     self.legend.set_position(pos);
+                    println!("Legend position set to {:?}", pos);
                 }
-                Command::DisableLegend => self.is_legend_enabled = false,
+                Command::DisableLegend => {
+                    self.is_legend_enabled = false;
+                    println!("Legend disabled");
+                }
             }
         }
 
